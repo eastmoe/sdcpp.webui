@@ -98,6 +98,7 @@
                 <input id="autoSaveCheckbox" type="checkbox">
                 <span data-i18n="autoSave">Auto-save generated images when imgs is available</span>
               </label>
+              <button class="ghost-button" id="openWizardBtn" type="button" data-i18n="openWizard">Open Setup Wizard</button>
             </div>
           </div>
         </div>
@@ -443,6 +444,41 @@
     <datalist id="samplerList"></datalist>
     <datalist id="schedulerList"></datalist>
     <datalist id="formatList"></datalist>
+  </div>
+  <div class="wizard-overlay" id="wizardOverlay" hidden aria-hidden="true">
+    <button class="wizard-backdrop" id="wizardBackdrop" type="button" aria-label="Close setup wizard"></button>
+    <section class="wizard-dialog" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+      <div class="wizard-header">
+        <div class="wizard-header-copy">
+          <span class="wizard-eyebrow" data-i18n="wizardLabel">Setup Wizard</span>
+          <h2 class="wizard-title" id="wizardTitle">Setup Wizard</h2>
+        </div>
+        <button class="icon-button wizard-close" id="closeWizardBtn" type="button" aria-label="Close setup wizard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="wizard-progress-shell">
+        <div class="wizard-progress-bar"><span id="wizardProgressBar"></span></div>
+        <div class="wizard-progress-meta">
+          <span class="wizard-step-count" id="wizardStepCount">1 / 6</span>
+          <span class="wizard-step-badge" id="wizardStepBadge"></span>
+        </div>
+      </div>
+      <div class="wizard-layout">
+        <aside class="wizard-sidebar" id="wizardNav"></aside>
+        <div class="wizard-content" id="wizardContent"></div>
+      </div>
+      <div class="wizard-actions">
+        <button class="ghost-button" id="wizardBackBtn" type="button" data-i18n="wizardBack">Back</button>
+        <div class="wizard-actions-right">
+          <button class="ghost-button" id="wizardSkipBtn" type="button" data-i18n="wizardClose">Close Wizard</button>
+          <button class="primary-button" id="wizardNextBtn" type="button" data-i18n="wizardNext">Next</button>
+        </div>
+      </div>
+    </section>
   </div>
   <div class="toast-host" id="toastHost"></div>
   <script src="./i18n.js" defer></script>

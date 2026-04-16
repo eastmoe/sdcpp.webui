@@ -3,7 +3,8 @@
     settings: "sdcpp.webui.settings.v1",
     gallery: "sdcpp.webui.gallery.v1",
     discoveries: "sdcpp.webui.discoveries.v1",
-    formValues: "sdcpp.webui.formValues.v1"
+    formValues: "sdcpp.webui.formValues.v1",
+    onboarding: "sdcpp.webui.onboarding.v1"
   };
 
   const DEFAULT_SETTINGS = {
@@ -14,7 +15,28 @@
     autoSave: true
   };
 
+  const DEFAULT_ONBOARDING = {
+    seen: false,
+    completed: false,
+    lastStep: 0,
+    lastCheckedAt: 0
+  };
+
   const GALLERY_LIMIT = 48;
+
+  const ONBOARDING_STEPS = [
+    { key: "welcome", navKey: "wizardStepWelcome", titleKey: "wizardWelcomeTitle", descKey: "wizardWelcomeDesc" },
+    { key: "server", navKey: "wizardStepServer", titleKey: "wizardServerTitle", descKey: "wizardServerDesc" },
+    { key: "network", navKey: "wizardStepNetwork", titleKey: "wizardNetworkTitle", descKey: "wizardNetworkDesc" },
+    { key: "api", navKey: "wizardStepApi", titleKey: "wizardApiTitle", descKey: "wizardApiDesc" },
+    { key: "storage", navKey: "wizardStepStorage", titleKey: "wizardStorageTitle", descKey: "wizardStorageDesc" },
+    { key: "finish", navKey: "wizardStepFinish", titleKey: "wizardFinishTitle", descKey: "wizardFinishDesc" }
+  ];
+
+  const SDCPP_REPO_URL = "https://github.com/leejet/stable-diffusion.cpp/";
+  const SDCPP_RELEASES_URL = "https://github.com/leejet/stable-diffusion.cpp/releases";
+  const SD_SERVER_START_COMMAND = ".\\bin\\Release\\sd-server.exe --diffusion-model ..\\models\\diffusion_models\\z_image_turbo_bf16.safetensors --vae ..\\models\\vae\\ae.sft --llm ..\\models\\text_encoders\\qwen_3_4b.safetensors --diffusion-fa --offload-to-cpu -v --cfg-scale 1.0";
+  const SD_SERVER_LISTEN_COMMAND = "--listen-ip 0.0.0.0 --listen-port 8080";
 
   const PALETTES = {
     green: { hue: 142, sat: "46%", light: "42%" },
@@ -345,6 +367,7 @@
     gallery: loadJson(STORAGE_KEYS.gallery, []),
     discoveries: loadJson(STORAGE_KEYS.discoveries, {}),
     formValues: loadJson(STORAGE_KEYS.formValues, {}),
+    onboarding: { ...DEFAULT_ONBOARDING, ...loadJson(STORAGE_KEYS.onboarding, DEFAULT_ONBOARDING), isOpen: false },
     connection: {
       openai: { status: "idle", detail: "" },
       sdapi: { status: "idle", detail: "" },
@@ -385,6 +408,8 @@
     renderGallery();
     loadDirectoryHandle();
     previewSdcppPayload();
+    renderOnboarding();
+    maybeStartOnboarding();
     if (state.settings.apiUrl) {
       checkConnections();
     }
@@ -403,7 +428,10 @@
       "latestResponseMeta", "discoveryPanels", "capabilitiesSummary", "galleryGrid",
       "galleryDetail", "gallerySearchInput", "toastHost", "jobIdInput", "pollIntervalInput",
       "autoPollCheckbox", "jobStatusPre", "jobStatusMeta", "sdcppPreviewPre",
-      "samplerList", "schedulerList", "formatList"
+      "samplerList", "schedulerList", "formatList", "openWizardBtn", "wizardOverlay",
+      "wizardBackdrop", "closeWizardBtn", "wizardTitle", "wizardProgressBar",
+      "wizardStepCount", "wizardStepBadge", "wizardNav", "wizardContent",
+      "wizardBackBtn", "wizardSkipBtn", "wizardNextBtn"
     ].forEach((id) => {
       el[id] = document.getElementById(id);
     });
@@ -449,6 +477,10 @@
     document.getElementById("checkConnectionBtn").addEventListener("click", checkConnections);
     document.getElementById("bindImgsBtn").addEventListener("click", bindImgsDirectory);
     document.getElementById("releaseImgsBtn").addEventListener("click", forgetImgsDirectory);
+    el.openWizardBtn.addEventListener("click", () => {
+      closeSettingsPanel();
+      openOnboardingWizard(state.onboarding.completed ? 0 : state.onboarding.lastStep);
+    });
     document.getElementById("refreshCapabilitiesBtn").addEventListener("click", fetchCapabilities);
     document.getElementById("refreshDiscoveryBtn").addEventListener("click", refreshDiscovery);
     document.getElementById("fetchCapabilitiesBtn").addEventListener("click", fetchCapabilities);
@@ -479,6 +511,21 @@
     document.getElementById("sdcppVidGenForm").addEventListener("submit", submitSdcppVidGen);
     document.getElementById("sdcppImgGenForm").addEventListener("input", previewSdcppPayload);
     document.getElementById("sdcppImgGenForm").addEventListener("change", previewSdcppPayload);
+    el.wizardBackdrop.addEventListener("click", () => closeOnboardingWizard());
+    el.closeWizardBtn.addEventListener("click", () => closeOnboardingWizard());
+    el.wizardSkipBtn.addEventListener("click", () => closeOnboardingWizard());
+    el.wizardBackBtn.addEventListener("click", () => setOnboardingStep(state.onboarding.lastStep - 1));
+    el.wizardNextBtn.addEventListener("click", advanceOnboardingStep);
+    el.wizardNav.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-wizard-step]");
+      if (!button) return;
+      setOnboardingStep(Number(button.dataset.wizardStep));
+    });
+    el.wizardContent.addEventListener("click", (event) => {
+      void handleWizardContentClick(event);
+    });
+    el.wizardContent.addEventListener("change", handleWizardContentChange);
+    el.wizardContent.addEventListener("input", handleWizardContentInput);
 
     document.addEventListener("click", (event) => {
       const target = event.target;
@@ -491,30 +538,52 @@
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closePanels();
+      if (event.key !== "Escape") return;
+      if (state.onboarding.isOpen) {
+        closeOnboardingWizard();
+        return;
+      }
+      closePanels();
     });
   }
 
   function hydrateState() {
     state.settings = { ...DEFAULT_SETTINGS, ...state.settings };
+    state.onboarding = { ...DEFAULT_ONBOARDING, ...state.onboarding, isOpen: false };
     state.capabilities = state.discoveries.capabilities || null;
-    el.languageSelect.value = state.settings.language;
-    el.paletteSelect.value = state.settings.palette;
-    el.modeSelect.value = state.settings.mode;
-    el.apiUrlInput.value = state.settings.apiUrl;
-    el.autoSaveCheckbox.checked = Boolean(state.settings.autoSave);
+    syncSettingsControls();
     syncDiscoveryIntoDatalists();
     updateHeroChips();
   }
 
   function persistSettings() {
     safeWrite(STORAGE_KEYS.settings, state.settings);
+    syncSettingsControls();
     updateHeroChips();
+  }
+
+  function syncSettingsControls() {
+    el.languageSelect.value = state.settings.language;
+    el.paletteSelect.value = state.settings.palette;
+    el.modeSelect.value = state.settings.mode;
+    el.apiUrlInput.value = state.settings.apiUrl;
+    el.autoSaveCheckbox.checked = Boolean(state.settings.autoSave);
+
+    const wizardLanguageSelect = document.getElementById("wizardLanguageSelect");
+    const wizardPaletteSelect = document.getElementById("wizardPaletteSelect");
+    const wizardModeSelect = document.getElementById("wizardModeSelect");
+    const wizardApiUrlInput = document.getElementById("wizardApiUrlInput");
+
+    if (wizardLanguageSelect) wizardLanguageSelect.value = state.settings.language;
+    if (wizardPaletteSelect) wizardPaletteSelect.value = state.settings.palette;
+    if (wizardModeSelect) wizardModeSelect.value = state.settings.mode;
+    if (wizardApiUrlInput && document.activeElement !== wizardApiUrlInput) wizardApiUrlInput.value = state.settings.apiUrl;
   }
 
   function saveSettings() {
     state.settings.apiUrl = normalizeBaseUrl(el.apiUrlInput.value);
     persistSettings();
+    renderOnboarding();
     toast("toastSuccess", "saveSettings", state.settings.apiUrl || "/");
   }
 
@@ -547,6 +616,10 @@
     return dict[key] || window.SDCPP_I18N.en[key] || key;
   }
 
+  function tf(key, values = {}) {
+    return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), t(key));
+  }
+
   function applyLanguage() {
     state.activeLanguage = currentLanguage();
     document.documentElement.lang = state.activeLanguage;
@@ -556,6 +629,9 @@
     localizeFieldLabels();
     el.helpBtn.title = t("helpTitle");
     el.settingsBtn.title = t("settingsTitle");
+    el.closeWizardBtn.title = t("wizardClose");
+    el.closeWizardBtn.setAttribute("aria-label", t("wizardClose"));
+    el.wizardBackdrop.setAttribute("aria-label", t("wizardClose"));
     el.gallerySearchInput.placeholder = state.activeLanguage === "zh-CN"
       ? "提示词 / 接口 / 文件"
       : state.activeLanguage === "zh-TW"
@@ -573,6 +649,7 @@
     renderDiscoveryPanels();
     renderCapabilitiesSummary();
     renderGallery();
+    renderOnboarding();
   }
 
   function primeFieldLabels() {
@@ -646,6 +723,222 @@
     el.settingsMenu.classList.remove("on");
     el.settingsBtn.classList.remove("on");
     el.settingsBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function persistOnboarding() {
+    safeWrite(STORAGE_KEYS.onboarding, {
+      seen: Boolean(state.onboarding.seen),
+      completed: Boolean(state.onboarding.completed),
+      lastStep: normalizeWizardStep(state.onboarding.lastStep),
+      lastCheckedAt: Number(state.onboarding.lastCheckedAt || 0)
+    });
+  }
+
+  function maybeStartOnboarding() {
+    if (state.onboarding.seen) return;
+    window.setTimeout(() => openOnboardingWizard(0), 120);
+  }
+
+  function normalizeWizardStep(value) {
+    const step = Number.isFinite(Number(value)) ? Math.floor(Number(value)) : 0;
+    return Math.min(Math.max(step, 0), ONBOARDING_STEPS.length - 1);
+  }
+
+  function openOnboardingWizard(step = 0) {
+    closePanels();
+    state.onboarding.isOpen = true;
+    state.onboarding.seen = true;
+    state.onboarding.lastStep = normalizeWizardStep(step);
+    persistOnboarding();
+    renderOnboarding();
+  }
+
+  function closeOnboardingWizard(options = {}) {
+    state.onboarding.isOpen = false;
+    if (options.completed) state.onboarding.completed = true;
+    persistOnboarding();
+    renderOnboarding();
+    if (options.completed) toast("toastSuccess", "wizardCompletedToast");
+  }
+
+  function setOnboardingStep(step) {
+    state.onboarding.lastStep = normalizeWizardStep(step);
+    persistOnboarding();
+    renderOnboarding();
+  }
+
+  function advanceOnboardingStep() {
+    if (state.onboarding.lastStep >= ONBOARDING_STEPS.length - 1) {
+      setActiveTab("dashboard");
+      closeOnboardingWizard({ completed: true });
+      return;
+    }
+    setOnboardingStep(state.onboarding.lastStep + 1);
+  }
+
+  async function handleWizardContentClick(event) {
+    const actionNode = event.target.closest("[data-wizard-action]");
+    if (!actionNode) return;
+
+    if (actionNode.dataset.wizardAction === "save-api") {
+      const input = document.getElementById("wizardApiUrlInput");
+      if (input) el.apiUrlInput.value = input.value;
+      saveSettings();
+      return;
+    }
+
+    if (actionNode.dataset.wizardAction === "check-api") {
+      const input = document.getElementById("wizardApiUrlInput");
+      if (input) el.apiUrlInput.value = input.value;
+      await checkConnections();
+      renderOnboarding();
+      return;
+    }
+
+    if (actionNode.dataset.wizardAction === "bind-imgs") {
+      await bindImgsDirectory();
+      renderOnboarding();
+      return;
+    }
+
+    if (actionNode.dataset.wizardAction === "forget-imgs") {
+      await forgetImgsDirectory();
+      renderOnboarding();
+    }
+  }
+
+  function handleWizardContentChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    if (target.id === "wizardLanguageSelect") {
+      state.settings.language = target.value;
+      persistSettings();
+      applyLanguage();
+      return;
+    }
+
+    if (target.id === "wizardPaletteSelect") {
+      state.settings.palette = target.value;
+      persistSettings();
+      applyTheme();
+      return;
+    }
+
+    if (target.id === "wizardModeSelect") {
+      state.settings.mode = target.value;
+      persistSettings();
+      applyTheme();
+    }
+  }
+
+  function handleWizardContentInput(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.id === "wizardApiUrlInput") el.apiUrlInput.value = target.value;
+  }
+
+  function renderOnboarding() {
+    const open = Boolean(state.onboarding.isOpen);
+    el.wizardOverlay.hidden = !open;
+    el.wizardOverlay.setAttribute("aria-hidden", String(!open));
+    el.wizardOverlay.classList.toggle("on", open);
+    document.body.classList.toggle("wizard-open", open);
+    if (!open) return;
+
+    const stepIndex = normalizeWizardStep(state.onboarding.lastStep);
+    const step = ONBOARDING_STEPS[stepIndex];
+    const progress = ((stepIndex + 1) / ONBOARDING_STEPS.length) * 100;
+
+    el.wizardTitle.textContent = t(step.titleKey);
+    el.wizardStepCount.textContent = tf("wizardStepCount", { current: stepIndex + 1, total: ONBOARDING_STEPS.length });
+    el.wizardStepBadge.textContent = state.onboarding.completed ? t("wizardCompletedBadge") : t("wizardStatusCurrent");
+    el.wizardStepBadge.className = `wizard-step-badge ${state.onboarding.completed ? "ok" : ""}`;
+    el.wizardProgressBar.style.width = `${progress}%`;
+    el.wizardBackBtn.disabled = stepIndex === 0;
+    el.wizardNextBtn.textContent = stepIndex === ONBOARDING_STEPS.length - 1 ? t("wizardFinishCta") : t("wizardNext");
+
+    el.wizardNav.innerHTML = ONBOARDING_STEPS.map((item, index) => {
+      const stateText = index < stepIndex || (state.onboarding.completed && index === stepIndex)
+        ? t("wizardStatusDone")
+        : index === stepIndex
+          ? t("wizardStatusCurrent")
+          : "";
+      return `<button class="wizard-nav-item ${index === stepIndex ? "active" : ""}" type="button" data-wizard-step="${index}"><span class="wizard-nav-index">${index + 1}</span><span class="wizard-nav-copy"><strong>${escapeHtml(t(item.navKey))}</strong></span><span class="wizard-nav-state">${escapeHtml(stateText)}</span></button>`;
+    }).join("");
+
+    el.wizardContent.innerHTML = renderOnboardingStep(step.key, step);
+    syncSettingsControls();
+  }
+
+  function renderOnboardingStep(stepKey, step) {
+    const origin = window.location?.origin;
+    const suggestedOrigin = origin && origin !== "null" && /^https?:/i.test(origin) ? origin : "http://127.0.0.1:1234";
+    const apiValue = state.settings.apiUrl || "";
+    const apiStatus = apiValue ? apiValue : t("wizardApiStatusEmpty");
+    const folderState = state.dirHandle ? `${t("wizardStorageStatusReady")} · ${state.dirHandle.name}` : t("wizardStorageStatusEmpty");
+    const browserSupport = window.showDirectoryPicker ? t("wizardStorageBrowserReady") : t("wizardStorageBrowserMissing");
+
+    if (stepKey === "welcome") {
+      return `<article class="wizard-panel wizard-panel-hero"><div><span class="wizard-panel-kicker">${escapeHtml(t("wizardLabel"))}</span><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></div><div class="wizard-pill-row"><span class="pill">${escapeHtml(t("language"))}</span><span class="pill">${escapeHtml(t("mode"))}</span><span class="pill">${escapeHtml(t("palette"))}</span></div></article><div class="wizard-grid wizard-grid-3"><label class="compact-field wizard-field"><span>${escapeHtml(t("language"))}</span><select id="wizardLanguageSelect">${renderWizardLanguageOptions()}</select></label><label class="compact-field wizard-field"><span>${escapeHtml(t("mode"))}</span><select id="wizardModeSelect">${renderWizardModeOptions()}</select></label><label class="compact-field wizard-field"><span>${escapeHtml(t("palette"))}</span><select id="wizardPaletteSelect">${renderWizardPaletteOptions()}</select></label></div><div class="wizard-note">${escapeHtml(t("wizardWelcomeNote"))}</div>`;
+    }
+
+    if (stepKey === "server") {
+      return `<article class="wizard-panel"><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></article><div class="wizard-grid wizard-grid-2"><article class="wizard-card"><h4>${escapeHtml(t("wizardServerDownloadTitle"))}</h4><p>${escapeHtml(t("wizardServerDownloadDesc"))}</p><p><a class="wizard-link" href="${escapeAttr(SDCPP_REPO_URL)}" target="_blank" rel="noreferrer noopener">${escapeHtml(SDCPP_REPO_URL)}</a></p><p><a class="wizard-link" href="${escapeAttr(SDCPP_RELEASES_URL)}" target="_blank" rel="noreferrer noopener">${escapeHtml(SDCPP_RELEASES_URL)}</a></p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerMatchTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerMatch1"))}</li><li>${escapeHtml(t("wizardServerMatch2"))}</li><li>${escapeHtml(t("wizardServerMatch3"))}</li><li>${escapeHtml(t("wizardServerMatch4"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerPrepareTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerPrepare1"))}</li><li>${escapeHtml(t("wizardServerPrepare2"))}</li><li>${escapeHtml(t("wizardServerPrepare3"))}</li><li>${escapeHtml(t("wizardServerPrepare4"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerLaunchTitle"))}</h4><p>${escapeHtml(t("wizardServerLaunchDesc"))}</p><div class="wizard-code-label">${escapeHtml(t("wizardServerExampleLabel"))}</div><pre class="wizard-code">${escapeHtml(SD_SERVER_START_COMMAND)}</pre></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerParamsTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerItem1"))}</li><li>${escapeHtml(t("wizardServerItem2"))}</li><li>${escapeHtml(t("wizardServerItem3"))}</li><li>${escapeHtml(t("wizardServerItem5"))}</li><li>${escapeHtml(t("wizardServerItem6"))}</li><li>${escapeHtml(t("wizardServerItem7"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerReadyTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerItem4"))}</li><li><code>http://127.0.0.1:1234/</code></li><li><code>/sdcpp/v1</code>, <code>/v1</code>, <code>/sdapi/v1</code></li><li>${escapeHtml(t("wizardServerReadyHint"))}</li></ul></article></div><div class="wizard-note">${escapeHtml(t("wizardServerHint"))}</div>`;
+    }
+
+    if (stepKey === "network") {
+      return `<article class="wizard-panel"><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></article><div class="wizard-grid wizard-grid-3"><article class="wizard-card"><h4>${escapeHtml(t("wizardNetworkPortTitle"))}</h4><p>${escapeHtml(t("wizardNetworkPortDesc"))}</p><pre class="wizard-code">${escapeHtml(SD_SERVER_LISTEN_COMMAND)}</pre></article><article class="wizard-card"><h4>${escapeHtml(t("wizardNetworkProxyTitle"))}</h4><p>${escapeHtml(t("wizardNetworkProxyDesc"))}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardNetworkTlsTitle"))}</h4><p>${escapeHtml(t("wizardNetworkTlsDesc"))}</p></article></div>`;
+    }
+
+    if (stepKey === "api") {
+      return `<article class="wizard-panel"><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></article><label class="field wizard-field"><span>${escapeHtml(t("apiUrl"))}</span><input id="wizardApiUrlInput" type="url" placeholder="http://127.0.0.1:1234" value="${escapeAttr(apiValue)}"></label><div class="toolbar compact-toolbar"><button class="primary-button" type="button" data-wizard-action="save-api">${escapeHtml(t("saveSettings"))}</button><button class="ghost-button" type="button" data-wizard-action="check-api">${escapeHtml(t("checkConnection"))}</button></div><div class="wizard-grid wizard-grid-3"><article class="wizard-card"><h4>${escapeHtml(t("wizardApiStatusTitle"))}</h4><p>${escapeHtml(apiStatus)}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardApiHintTitle1"))}</h4><p>${escapeHtml(tf("wizardApiHint1", { origin: suggestedOrigin }))}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardApiHintTitle2"))}</h4><p>${escapeHtml(t("wizardApiHint2"))}</p></article></div>${renderWizardConnectionResults()}<div class="wizard-note">${escapeHtml(t("wizardApiHint3"))}</div>`;
+    }
+
+    if (stepKey === "storage") {
+      return `<article class="wizard-panel"><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></article><div class="toolbar compact-toolbar"><button class="primary-button" type="button" data-wizard-action="bind-imgs">${escapeHtml(t("bindImgs"))}</button><button class="ghost-button" type="button" data-wizard-action="forget-imgs">${escapeHtml(t("releaseImgs"))}</button></div><div class="wizard-grid wizard-grid-2"><article class="wizard-card"><h4>${escapeHtml(t("wizardStorageStatusTitle"))}</h4><p>${escapeHtml(folderState)}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardStorageBrowserTitle"))}</h4><p>${escapeHtml(browserSupport)}</p></article></div><div class="wizard-note">${escapeHtml(t("saveHint"))}</div>`;
+    }
+
+    return `<article class="wizard-panel wizard-panel-hero"><div><span class="wizard-panel-kicker">${escapeHtml(t("wizardStepFinish"))}</span><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></div></article><div class="wizard-grid wizard-grid-2"><article class="wizard-card"><h4>${escapeHtml(t("tabDashboard"))}</h4><p>${escapeHtml(t("wizardFeatureDashboardDesc"))}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardFeatureCompatTitle"))}</h4><p>${escapeHtml(t("wizardFeatureCompatDesc"))}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardFeatureNativeTitle"))}</h4><p>${escapeHtml(t("wizardFeatureNativeDesc"))}</p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardFeatureGalleryTitle"))}</h4><p>${escapeHtml(t("wizardFeatureGalleryDesc"))}</p></article></div><div class="wizard-note">${escapeHtml(t("wizardFinishNote"))}</div>`;
+  }
+
+  function renderWizardLanguageOptions() {
+    return [
+      { value: "auto", label: t("autoLanguage") },
+      { value: "zh-CN", label: "简体中文" },
+      { value: "zh-TW", label: "繁體中文" },
+      { value: "en", label: "English" },
+      { value: "ja", label: "日本語" },
+      { value: "ko", label: "한국어" }
+    ].map((item) => `<option value="${escapeAttr(item.value)}"${item.value === state.settings.language ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("");
+  }
+
+  function renderWizardPaletteOptions() {
+    return ["green", "blue", "purple", "yellow", "cyan", "red"]
+      .map((value) => `<option value="${escapeAttr(value)}"${value === state.settings.palette ? " selected" : ""}>${escapeHtml(t(`palette${capitalize(value)}`))}</option>`)
+      .join("");
+  }
+
+  function renderWizardModeOptions() {
+    return ["auto", "day", "twilight", "night", "black"]
+      .map((value) => `<option value="${escapeAttr(value)}"${value === state.settings.mode ? " selected" : ""}>${escapeHtml(t(`mode${capitalize(value)}`))}</option>`)
+      .join("");
+  }
+
+  function renderWizardConnectionResults() {
+    const items = [
+      { label: t("familyOpenai"), info: state.connection.openai },
+      { label: t("familySdapi"), info: state.connection.sdapi },
+      { label: t("familySdcpp"), info: state.connection.sdcpp }
+    ];
+    const checkedText = state.onboarding.lastCheckedAt
+      ? `${t("wizardApiLastCheck")}: ${formatTime(state.onboarding.lastCheckedAt)}`
+      : t("wizardApiNeverChecked");
+    return `<div class="wizard-grid wizard-grid-3"><article class="wizard-card wizard-card-wide"><h4>${escapeHtml(t("wizardApiResultsTitle"))}</h4><p>${escapeHtml(checkedText)}</p></article>${items.map(({ label, info }) => {
+      const statusText = info.status === "ok" ? t("connectionOk") : info.status === "bad" ? t("connectionFail") : t("connectionIdle");
+      const statusClass = info.status === "ok" ? "ok" : info.status === "bad" ? "bad" : "";
+      return `<article class="wizard-card"><div class="wizard-card-heading"><h4>${escapeHtml(label)}</h4><span class="pill ${statusClass}">${escapeHtml(statusText)}</span></div><p>${escapeHtml(info.detail || "-")}</p></article>`;
+    }).join("")}</div>`;
   }
 
   function enhanceSliderControls() {
@@ -911,6 +1204,7 @@
     const baseUrl = normalizeBaseUrl(el.apiUrlInput.value || state.settings.apiUrl);
     if (!baseUrl) {
       toast("toastError", "apiUrl", "API URL is required");
+      renderOnboarding();
       return;
     }
     state.settings.apiUrl = baseUrl;
@@ -938,6 +1232,8 @@
         state.connection[key] = { status: "bad", detail: String(result.reason?.message || result.reason) };
       }
     });
+    state.onboarding.lastCheckedAt = Date.now();
+    persistOnboarding();
     const discoveryTasks = [];
     if (state.connection.sdapi.status === "ok") {
       discoveryTasks.push(fetchDiscovery("samplers"), fetchDiscovery("schedulers"));
@@ -949,6 +1245,7 @@
       await Promise.allSettled(discoveryTasks);
     }
     renderConnectionCards();
+    renderOnboarding();
     toast(Object.values(state.connection).some((item) => item.status === "ok") ? "toastSuccess" : "toastError", Object.values(state.connection).some((item) => item.status === "ok") ? "toastConnection" : "connectionFail");
   }
 
@@ -1985,17 +2282,23 @@
   async function bindImgsDirectory() {
     if (!window.showDirectoryPicker) {
       toast("toastError", "bindImgs", "File System Access API is unavailable here");
+      renderOnboarding();
       return;
     }
     try {
       const handle = await window.showDirectoryPicker({ id: "sdcpp-imgs", mode: "readwrite" });
-      if (!(await ensurePermission(handle, true))) return;
+      if (!(await ensurePermission(handle, true))) {
+        renderOnboarding();
+        return;
+      }
       state.dirHandle = handle;
       await saveDirectoryHandle(handle);
       updateHeroChips();
+      renderOnboarding();
       toast("toastSuccess", "toastFolderBound", handle.name);
     } catch (error) {
       if (error?.name !== "AbortError") toast("toastError", "bindImgs", error.message || String(error));
+      renderOnboarding();
     }
   }
 
@@ -2010,12 +2313,14 @@
       // ignore
     }
     updateHeroChips();
+    renderOnboarding();
     toast("toastInfo", "toastFolderForgotten");
   }
 
   async function loadDirectoryHandle() {
     state.dirHandle = await getSavedDirectoryHandle();
     updateHeroChips();
+    renderOnboarding();
   }
 
   async function ensureDirectoryHandle(write = true) {
