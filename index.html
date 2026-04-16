@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
+  <title>sd-server WebUI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./app.css">
+</head>
+<body data-actual-mode="day">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <div class="brand-topline">
+            <h1 data-i18n="appTitle">sd-server WebUI</h1>
+            <span class="brand-badge">SDCPP.WEBUI</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="help-wrap">
+          <button class="icon-button" id="helpBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Help">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M9.4 9.6a2.8 2.8 0 0 1 5.2 1.4c0 2-2.6 2.5-2.6 4.3"></path>
+              <circle cx="12" cy="17.2" r="0.9" fill="currentColor" stroke="none"></circle>
+            </svg>
+          </button>
+          <div class="menu-panel help-menu" id="helpMenu">
+            <div class="menu-title" data-i18n="helpTitle">Help</div>
+            <div class="help-list">
+              <div class="help-item" data-i18n="helpItem1">Use the gear menu to configure API URL, theme, language, and imgs save directory.</div>
+              <div class="help-item" data-i18n="helpItem2">OpenAI and sdapi requests support sd_cpp_extra_args JSON embedded into prompt.</div>
+              <div class="help-item" data-i18n="helpItem3">sdcpp img_gen is async. After submission, the UI automatically polls job status.</div>
+              <div class="help-item" data-i18n="helpItem4">Use Share Card from latest results or gallery to export a visual summary card.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-wrap">
+          <button class="icon-button" id="settingsBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .66.39 1.26 1 1.51.16.07.33.1.51.1H21a2 2 0 0 1 0 4h-.09c-.18 0-.35.03-.51.1-.61.25-1 .85-1 1.51z"></path>
+            </svg>
+          </button>
+          <div class="menu-panel settings-menu" id="settingsMenu">
+            <div class="menu-title" data-i18n="settingsTitle">Settings</div>
+            <div class="settings-stack">
+              <label class="field">
+                <span data-i18n="apiUrl">sd-server API URL</span>
+                <input id="apiUrlInput" type="url" placeholder="http://127.0.0.1:8080">
+              </label>
+              <div class="toolbar compact-toolbar">
+                <button class="primary-button" id="saveSettingsBtn" type="button" data-i18n="saveSettings">Save Settings</button>
+                <button class="ghost-button" id="checkConnectionBtn" type="button" data-i18n="checkConnection">Check Connection</button>
+              </div>
+              <label class="compact-field">
+                <span data-i18n="language">Language</span>
+                <select id="languageSelect">
+                  <option value="auto" data-i18n="autoLanguage">Auto</option>
+                  <option value="zh-CN">简体中文</option>
+                  <option value="zh-TW">繁體中文</option>
+                  <option value="en">English</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                </select>
+              </label>
+              <label class="compact-field">
+                <span data-i18n="palette">Palette</span>
+                <select id="paletteSelect">
+                  <option value="green" data-i18n="paletteGreen">Light Green</option>
+                  <option value="blue" data-i18n="paletteBlue">Light Blue</option>
+                  <option value="purple" data-i18n="palettePurple">Light Purple</option>
+                  <option value="yellow" data-i18n="paletteYellow">Light Yellow</option>
+                  <option value="cyan" data-i18n="paletteCyan">Light Cyan</option>
+                  <option value="red" data-i18n="paletteRed">Light Red</option>
+                </select>
+              </label>
+              <label class="compact-field">
+                <span data-i18n="mode">Mode</span>
+                <select id="modeSelect">
+                  <option value="auto" data-i18n="modeAuto">Auto</option>
+                  <option value="day" data-i18n="modeDay">Day</option>
+                  <option value="twilight" data-i18n="modeTwilight">Twilight / Dawn</option>
+                  <option value="night" data-i18n="modeNight">Night</option>
+                  <option value="black" data-i18n="modeBlack">Pure Black</option>
+                </select>
+              </label>
+              <div class="toolbar compact-toolbar">
+                <button class="ghost-button" id="bindImgsBtn" type="button" data-i18n="bindImgs">Bind imgs Folder</button>
+                <button class="ghost-button" id="releaseImgsBtn" type="button" data-i18n="releaseImgs">Forget Folder</button>
+              </div>
+              <label class="toggle-line">
+                <input id="autoSaveCheckbox" type="checkbox">
+                <span data-i18n="autoSave">Auto-save generated images when imgs is available</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="top-strip section-shell compact-shell">
+      <div class="status-strip">
+        <span class="status-chip"><span class="status-dot" id="apiUrlDot"></span><span id="apiUrlChipText">API URL</span></span>
+        <span class="status-chip"><span class="status-dot" id="folderDot"></span><span id="folderChipText">imgs</span></span>
+        <span class="status-chip"><span class="status-dot ok"></span><span id="modeChipText">Auto</span></span>
+      </div>
+      <div class="toolbar compact-toolbar top-actions">
+        <button class="toolbar-button" id="refreshCapabilitiesBtn" type="button" data-i18n="refreshCapabilities">Refresh Capabilities</button>
+        <button class="toolbar-button" id="refreshDiscoveryBtn" type="button" data-i18n="refreshDiscovery">Refresh Discovery</button>
+      </div>
+    </section>
+
+    <nav class="tabbar" aria-label="Primary tabs">
+      <button class="tab-button" type="button" data-tab="dashboard" aria-selected="true" data-i18n="tabDashboard">Dashboard</button>
+      <button class="tab-button" type="button" data-tab="openai" aria-selected="false" data-i18n="tabOpenai">OpenAI API</button>
+      <button class="tab-button" type="button" data-tab="sdapi" aria-selected="false" data-i18n="tabSdapi">Stable Diffusion WebUI API</button>
+      <button class="tab-button" type="button" data-tab="sdcpp" aria-selected="false" data-i18n="tabSdcpp">sdcpp API</button>
+      <button class="tab-button" type="button" data-tab="discovery" aria-selected="false" data-i18n="tabDiscovery">Discovery</button>
+      <button class="tab-button" type="button" data-tab="jobs" aria-selected="false" data-i18n="tabJobs">Jobs</button>
+      <button class="tab-button" type="button" data-tab="gallery" aria-selected="false" data-i18n="tabGallery">Gallery</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="section-shell">
+        <div class="section-heading">
+          <div><h3 data-i18n="dashboardOverview">Overview</h3></div>
+        </div>
+        <div class="family-cards" id="familyStatusCards"></div>
+      </div>
+
+      <div class="workspace-grid">
+        <div class="section-shell">
+          <div class="section-heading">
+            <div><h3 data-i18n="latestActivity">Recent Activity</h3></div>
+          </div>
+          <div class="history-list" id="recentHistoryList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-openai">
+      <div class="api-stack">
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>POST /v1/images/generations</h3>
+              <p data-i18n="openaiGenerationsDesc">OpenAI-style synchronous image generation with optional native sd_cpp_extra_args extension.</p>
+            </div>
+          </div>
+          <form id="openaiGenerationForm" class="form-grid">
+            <label class="field span-12"><span>prompt</span><textarea name="prompt" required></textarea></label>
+            <label class="field span-3"><span>n</span><input name="n" type="number" min="1" value="1"></label>
+            <label class="field span-3"><span>size</span><input name="size" type="text" value="1024x1024"></label>
+            <label class="field span-3"><span>output_format</span><select name="output_format"><option value="png">png</option><option value="jpeg">jpeg</option><option value="webp">webp</option></select></label>
+            <label class="field span-3"><span>output_compression</span><input name="output_compression" type="number" min="0" max="100" value="100"></label>
+            <label class="field span-12"><span>sd_cpp_extra_args JSON</span><textarea name="extra_args"></textarea></label>
+            <div class="span-12 form-actions">
+              <button class="primary-button" type="submit" data-i18n="sendRequest">Send Request</button>
+              <button class="ghost-button" type="reset" data-i18n="resetForm">Reset</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>POST /v1/images/edits</h3>
+              <p data-i18n="openaiEditsDesc">OpenAI-style multipart image edit request supporting image[] and optional mask upload.</p>
+            </div>
+          </div>
+          <form id="openaiEditForm" class="form-grid">
+            <label class="field span-12"><span>prompt</span><textarea name="prompt" required></textarea></label>
+            <label class="field span-6"><span>image[]</span><input name="image_files" type="file" accept="image/*" multiple required></label>
+            <label class="field span-6"><span>mask</span><input name="mask" type="file" accept="image/*"></label>
+            <label class="field span-3"><span>n</span><input name="n" type="number" min="1" value="1"></label>
+            <label class="field span-3"><span>size</span><input name="size" type="text" value="1024x1024"></label>
+            <label class="field span-3"><span>output_format</span><select name="output_format"><option value="png">png</option><option value="jpeg">jpeg</option></select></label>
+            <label class="field span-3"><span>output_compression</span><input name="output_compression" type="number" min="0" max="100" value="100"></label>
+            <label class="field span-12"><span>sd_cpp_extra_args JSON</span><textarea name="extra_args"></textarea></label>
+            <div class="span-12 form-actions">
+              <button class="primary-button" type="submit" data-i18n="sendRequest">Send Request</button>
+              <button class="ghost-button" id="fetchOpenaiModelsBtn" type="button" data-i18n="fetchModels">Fetch /v1/models</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-sdapi">
+      <div class="api-stack">
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>POST /sdapi/v1/txt2img</h3>
+              <p data-i18n="sdapiTxt2imgDesc">WebUI-compatible text-to-image request with native extension JSON embedded into prompt.</p>
+            </div>
+          </div>
+          <form id="sdapiTxt2imgForm" class="form-grid">
+            <label class="field span-12"><span>prompt</span><textarea name="prompt" required></textarea></label>
+            <label class="field span-12"><span>negative_prompt</span><textarea name="negative_prompt"></textarea></label>
+            <label class="field span-3"><span>width</span><input name="width" type="number" value="1024"></label>
+            <label class="field span-3"><span>height</span><input name="height" type="number" value="1024"></label>
+            <label class="field span-3"><span>steps</span><input name="steps" type="number" value="28"></label>
+            <label class="field span-3"><span>cfg_scale</span><input name="cfg_scale" type="number" step="0.1" value="7"></label>
+            <label class="field span-3"><span>seed_mode</span><select name="seed_mode"><option value="random" data-i18n="seedRandom">Randomize</option><option value="fixed" data-i18n="seedFixed">Fixed</option></select></label>
+            <label class="field span-3"><span>seed</span><input name="seed" type="number" value=""></label>
+            <label class="field span-3"><span>batch_size</span><input name="batch_size" type="number" min="1" value="1"></label>
+            <label class="field span-3"><span>clip_skip</span><input name="clip_skip" type="number" value="-1"></label>
+            <label class="field span-3"><span>sampler_name</span><select name="sampler_name" data-select-source="samplers"><option value=""></option></select></label>
+            <label class="field span-6"><span>scheduler</span><select name="scheduler" data-select-source="schedulers"><option value=""></option></select></label>
+            <label class="field span-6"><span>extra_images</span><input name="extra_images_files" type="file" accept="image/*" multiple></label>
+            <label class="field span-6"><span>lora JSON</span><textarea name="lora_json"></textarea></label>
+            <label class="field span-6"><span>sd_cpp_extra_args JSON</span><textarea name="extra_args"></textarea></label>
+            <div class="span-12 form-actions">
+              <button class="primary-button" type="submit" data-i18n="sendRequest">Send Request</button>
+              <button class="ghost-button" type="button" data-discovery-fetch="samplers" data-i18n="fetchSamplers">Fetch Samplers</button>
+              <button class="ghost-button" type="button" data-discovery-fetch="schedulers" data-i18n="fetchSchedulers">Fetch Schedulers</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>POST /sdapi/v1/img2img</h3>
+              <p data-i18n="sdapiImg2imgDesc">WebUI-compatible image-to-image request with init_images, mask, denoising strength, and native extension support.</p>
+            </div>
+          </div>
+          <form id="sdapiImg2imgForm" class="form-grid">
+            <label class="field span-12"><span>prompt</span><textarea name="prompt" required></textarea></label>
+            <label class="field span-12"><span>negative_prompt</span><textarea name="negative_prompt"></textarea></label>
+            <label class="field span-6"><span>init_images</span><input name="init_images_files" type="file" accept="image/*" multiple required></label>
+            <label class="field span-6"><span>mask</span><input name="mask_file" type="file" accept="image/*"></label>
+            <label class="field span-3"><span>width</span><input name="width" type="number" value="1024"></label>
+            <label class="field span-3"><span>height</span><input name="height" type="number" value="1024"></label>
+            <label class="field span-3"><span>steps</span><input name="steps" type="number" value="28"></label>
+            <label class="field span-3"><span>cfg_scale</span><input name="cfg_scale" type="number" step="0.1" value="7"></label>
+            <label class="field span-3"><span>seed_mode</span><select name="seed_mode"><option value="random" data-i18n="seedRandom">Randomize</option><option value="fixed" data-i18n="seedFixed">Fixed</option></select></label>
+            <label class="field span-3"><span>seed</span><input name="seed" type="number" value=""></label>
+            <label class="field span-3"><span>batch_size</span><input name="batch_size" type="number" min="1" value="1"></label>
+            <label class="field span-3"><span>denoising_strength</span><input name="denoising_strength" type="number" min="0" max="1" step="0.01" value="0.75"></label>
+            <label class="field span-3"><span>inpainting_mask_invert</span><select name="inpainting_mask_invert"><option value="0">0 / false</option><option value="1">1 / true</option></select></label>
+            <label class="field span-3"><span>clip_skip</span><input name="clip_skip" type="number" value="-1"></label>
+            <label class="field span-3"><span>sampler_name</span><select name="sampler_name" data-select-source="samplers"><option value=""></option></select></label>
+            <label class="field span-6"><span>scheduler</span><select name="scheduler" data-select-source="schedulers"><option value=""></option></select></label>
+            <label class="field span-6"><span>lora JSON</span><textarea name="lora_json"></textarea></label>
+            <label class="field span-6"><span>sd_cpp_extra_args JSON</span><textarea name="extra_args"></textarea></label>
+            <div class="span-12 form-actions">
+              <button class="primary-button" type="submit" data-i18n="sendRequest">Send Request</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-sdcpp">
+      <div class="api-stack">
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>GET /sdcpp/v1/capabilities</h3>
+              <p data-i18n="sdcppCapabilitiesDesc">Fetch model, defaults, samplers, schedulers, output formats, limits, and features.</p>
+            </div>
+            <div class="toolbar">
+              <button class="secondary-button" id="fetchCapabilitiesBtn" type="button" data-i18n="fetchCapabilities">Fetch Capabilities</button>
+              <button class="ghost-button" id="applyCapabilitiesBtn" type="button" data-i18n="applyDefaults">Apply Defaults To Form</button>
+            </div>
+          </div>
+          <div id="capabilitiesSummary" class="mini-grid"></div>
+        </div>
+
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>POST /sdcpp/v1/img_gen</h3>
+              <p data-i18n="sdcppImgGenDesc">Native async image generation with automatic job polling and gallery recording.</p>
+            </div>
+          </div>
+          <form id="sdcppImgGenForm" class="form-grid">
+            <label class="field span-12"><span>prompt</span><textarea name="prompt" required></textarea></label>
+            <label class="field span-12"><span>negative_prompt</span><textarea name="negative_prompt"></textarea></label>
+            <label class="field span-3"><span>clip_skip</span><input name="clip_skip" type="number" value="-1"></label>
+            <label class="field span-3"><span>width</span><input name="width" type="number" value="1024"></label>
+            <label class="field span-3"><span>height</span><input name="height" type="number" value="1024"></label>
+            <label class="field span-3"><span>strength</span><input name="strength" type="number" step="0.01" value="0.75"></label>
+            <label class="field span-3"><span>seed_mode</span><select name="seed_mode"><option value="random" data-i18n="seedRandom">Randomize</option><option value="fixed" data-i18n="seedFixed">Fixed</option></select></label>
+            <label class="field span-3"><span>seed</span><input name="seed" type="number" value=""></label>
+            <label class="field span-3"><span>batch_count</span><input name="batch_count" type="number" min="1" value="1"></label>
+            <label class="field span-3"><span>control_strength</span><input name="control_strength" type="number" step="0.01" value="0.9"></label>
+            <label class="field span-3"><span>output_format</span><input name="output_format" list="formatList" value="png"></label>
+            <label class="field span-3"><span>output_compression</span><input name="output_compression" type="number" min="0" max="100" value="100"></label>
+            <label class="toggle-line span-3"><input name="auto_resize_ref_image" type="checkbox" checked><span>auto_resize_ref_image</span></label>
+            <label class="toggle-line span-3"><input name="increase_ref_index" type="checkbox"><span>increase_ref_index</span></label>
+            <label class="toggle-line span-3"><input name="embed_image_metadata" type="checkbox" checked><span>embed_image_metadata</span></label>
+            <label class="toggle-line span-3"><input name="scm_policy_dynamic" type="checkbox" checked><span>scm_policy_dynamic</span></label>
+            <label class="field span-6"><span>init_image</span><input name="init_image_file" type="file" accept="image/*"></label>
+            <label class="field span-6"><span>mask_image</span><input name="mask_image_file" type="file" accept="image/*"></label>
+            <label class="field span-6"><span>control_image</span><input name="control_image_file" type="file" accept="image/*"></label>
+            <label class="field span-6"><span>ref_images</span><input name="ref_images_files" type="file" accept="image/*" multiple></label>
+            <label class="field span-3"><span>sample_params.scheduler</span><select name="scheduler" data-select-source="schedulers"><option value=""></option></select></label>
+            <label class="field span-3"><span>sample_params.sample_method</span><select name="sample_method" data-select-source="samplers"><option value=""></option></select></label>
+            <label class="field span-3"><span>sample_params.sample_steps</span><input name="sample_steps" type="number" value="28"></label>
+            <label class="field span-3"><span>sample_params.shifted_timestep</span><input name="shifted_timestep" type="number" value="0"></label>
+            <label class="field span-3"><span>sample_params.eta</span><input name="eta" type="number" step="0.01"></label>
+            <label class="field span-3"><span>sample_params.flow_shift</span><input name="flow_shift" type="number" step="0.01"></label>
+            <label class="field span-6"><span>sample_params.custom_sigmas</span><textarea name="custom_sigmas"></textarea></label>
+            <label class="field span-3"><span>guidance.txt_cfg</span><input name="txt_cfg" type="number" step="0.1" value="7"></label>
+            <label class="field span-3"><span>guidance.img_cfg</span><input name="img_cfg" type="number" step="0.1"></label>
+            <label class="field span-3"><span>guidance.distilled_guidance</span><input name="distilled_guidance" type="number" step="0.1" value="3.5"></label>
+            <label class="field span-3"><span>guidance.slg.scale</span><input name="slg_scale" type="number" step="0.1" value="0"></label>
+            <label class="field span-4"><span>guidance.slg.layers</span><textarea name="slg_layers"></textarea></label>
+            <label class="field span-4"><span>guidance.slg.layer_start</span><input name="slg_start" type="number" step="0.01" value="0.01"></label>
+            <label class="field span-4"><span>guidance.slg.layer_end</span><input name="slg_end" type="number" step="0.01" value="0.2"></label>
+            <label class="field span-6"><span>lora JSON</span><textarea name="lora_json"></textarea></label>
+            <label class="field span-6"><span>vae_tiling_params JSON</span><textarea name="vae_tiling_json"></textarea></label>
+            <label class="field span-4"><span>cache_mode</span><input name="cache_mode" type="text" value="disabled"></label>
+            <label class="field span-4"><span>cache_option</span><input name="cache_option" type="text"></label>
+            <label class="field span-4"><span>scm_mask</span><input name="scm_mask" type="text"></label>
+            <div class="span-12 form-actions">
+              <button class="primary-button" type="submit" data-i18n="submitJob">Submit Async Job</button>
+              <button class="ghost-button" id="previewSdcppJsonBtn" type="button" data-i18n="previewJson">Preview JSON</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="api-card">
+          <div class="section-heading">
+            <div>
+              <h3>POST /sdcpp/v1/vid_gen</h3>
+              <p data-i18n="sdcppVidGenDesc">Future native video endpoint. The current server may reply with 501 Not Implemented.</p>
+            </div>
+          </div>
+          <form id="sdcppVidGenForm" class="form-grid">
+            <label class="field span-12"><span>Raw request JSON</span><textarea name="raw_json" required></textarea></label>
+            <div class="span-12 form-actions"><button class="primary-button" type="submit" data-i18n="sendRequest">Send Request</button></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-discovery">
+      <div class="section-shell">
+        <div class="section-heading">
+          <div>
+            <h3 data-i18n="discoveryTitle">Discovery & Compatibility Endpoints</h3>
+            <p data-i18n="discoveryDesc">Fetch compatible metadata endpoints and keep samplers, schedulers, models, and options ready for the forms.</p>
+          </div>
+          <div class="toolbar">
+            <button class="toolbar-button" type="button" data-discovery-fetch="models" data-i18n="fetchModels">Fetch /v1/models</button>
+            <button class="toolbar-button" type="button" data-discovery-fetch="loras" data-i18n="fetchLoras">Fetch LoRAs</button>
+            <button class="toolbar-button" type="button" data-discovery-fetch="samplers" data-i18n="fetchSamplers">Fetch Samplers</button>
+            <button class="toolbar-button" type="button" data-discovery-fetch="schedulers" data-i18n="fetchSchedulers">Fetch Schedulers</button>
+            <button class="toolbar-button" type="button" data-discovery-fetch="sd-models" data-i18n="fetchSdModels">Fetch SD Models</button>
+            <button class="toolbar-button" type="button" data-discovery-fetch="options" data-i18n="fetchOptions">Fetch Options</button>
+          </div>
+        </div>
+        <div class="discovery-grid" id="discoveryPanels"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-jobs">
+      <div class="section-shell">
+        <div class="section-heading">
+          <div>
+            <h3 data-i18n="jobsTitle">Job Polling & Cancellation</h3>
+            <p data-i18n="jobsDesc">Track native sdcpp async jobs, poll status, and cancel them when supported.</p>
+          </div>
+        </div>
+        <form class="form-grid">
+          <label class="field span-6"><span data-i18n="jobId">Job ID</span><input id="jobIdInput" type="text"></label>
+          <label class="field span-3"><span data-i18n="pollInterval">Poll Interval (s)</span><input id="pollIntervalInput" type="number" min="1" value="2"></label>
+          <label class="toggle-line span-3"><input id="autoPollCheckbox" type="checkbox" checked><span data-i18n="autoPoll">Auto poll until terminal state</span></label>
+          <div class="span-12 form-actions">
+            <button class="primary-button" id="pollJobBtn" type="button" data-i18n="pollJob">Poll Job</button>
+            <button class="secondary-button" id="cancelJobBtn" type="button" data-i18n="cancelJob">Cancel Job</button>
+            <button class="ghost-button" id="stopPollingBtn" type="button" data-i18n="stopPolling">Stop Polling</button>
+          </div>
+        </form>
+        <div class="workspace-grid">
+          <div class="response-box">
+            <div class="section-heading"><div><h4 data-i18n="jobStatus">Job Status</h4><p id="jobStatusMeta" class="muted">-</p></div></div>
+            <pre id="jobStatusPre">{}</pre>
+          </div>
+          <div class="response-box">
+            <div class="section-heading"><div><h4 data-i18n="requestPreview">Request Preview</h4><p data-i18n="requestPreviewDesc">Preview of the current native img_gen payload before submission.</p></div></div>
+            <pre id="sdcppPreviewPre">{}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-gallery">
+      <div class="section-shell">
+        <div class="section-heading">
+          <div>
+            <h3 data-i18n="galleryTitle">Gallery Mode</h3>
+            <p data-i18n="galleryDesc">Saved album thumbnails and generation parameter history live in localStorage. Full saved files reopen from imgs when the folder stays bound.</p>
+          </div>
+          <div class="toolbar">
+            <label class="compact-field"><span data-i18n="search">Search</span><input id="gallerySearchInput" type="search"></label>
+            <button class="toolbar-button" id="exportGalleryBtn" type="button" data-i18n="exportGallery">Export History</button>
+            <button class="toolbar-button" id="clearGalleryBtn" type="button" data-i18n="clearGallery">Clear Gallery</button>
+          </div>
+        </div>
+        <div class="gallery-layout">
+          <div class="gallery-grid" id="galleryGrid"></div>
+          <div class="gallery-detail" id="galleryDetail"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="workspace-grid">
+      <section class="section-shell">
+        <div class="section-heading">
+          <div>
+            <h3 data-i18n="latestResults">Latest Results</h3>
+            <p data-i18n="latestResultsDesc">Newest generated images from any supported endpoint. Use Save All to write them into imgs.</p>
+          </div>
+          <div class="toolbar">
+            <button class="toolbar-button" id="saveAllResultsBtn" type="button" data-i18n="saveAll">Save All</button>
+            <button class="toolbar-button" id="clearLatestResultsBtn" type="button" data-i18n="clearResults">Clear Results</button>
+          </div>
+        </div>
+        <div class="result-grid" id="latestResultsGrid"></div>
+      </section>
+      <section class="section-shell">
+        <div class="section-heading">
+          <div>
+            <h3 data-i18n="latestResponse">Latest Response</h3>
+            <p id="latestResponseMeta" class="muted">-</p>
+          </div>
+        </div>
+        <div class="response-box"><pre id="latestResponsePre">{}</pre></div>
+      </section>
+    </div>
+
+    <datalist id="samplerList"></datalist>
+    <datalist id="schedulerList"></datalist>
+    <datalist id="formatList"></datalist>
+  </div>
+  <div class="toast-host" id="toastHost"></div>
+  <script src="./i18n.js" defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>
