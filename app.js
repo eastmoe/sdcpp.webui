@@ -70,7 +70,7 @@
         ja: "あなたが共有した形そのままの例です。ローカル絶対パスでモデルを指定し、`--fa` で full flash attention を有効にします。",
         ko: "사용자가 준 형태를 그대로 담은 예시입니다. 로컬 절대 경로로 모델을 지정하고 `--fa` 로 전체 flash attention 을 켭니다."
       },
-      command: './sd-server --diffusion-model "C:\\Users\\xkw19\\Downloads\\anima-preview3-base.safetensors" --llm "C:\\Users\\xkw19\\Downloads\\qwen_3_06b_base.safetensors" --vae "C:\\Users\\xkw19\\Downloads\\qwen_image_vae.safetensors" --fa'
+      command: './sd-server --diffusion-model "C:\\Users\\YourUserName\\Downloads\\anima-preview3-base.safetensors" --llm "C:\\Users\\YourUserName\\Downloads\\qwen_3_06b_base.safetensors" --vae "C:\\Users\\YourUserName\\Downloads\\qwen_image_vae.safetensors" --fa'
     },
     {
       title: {
