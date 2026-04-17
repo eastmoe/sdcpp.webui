@@ -37,6 +37,211 @@
   const SDCPP_RELEASES_URL = "https://github.com/leejet/stable-diffusion.cpp/releases";
   const SD_SERVER_START_COMMAND = ".\\bin\\Release\\sd-server.exe --diffusion-model ..\\models\\diffusion_models\\z_image_turbo_bf16.safetensors --vae ..\\models\\vae\\ae.sft --llm ..\\models\\text_encoders\\qwen_3_4b.safetensors --diffusion-fa --offload-to-cpu -v --cfg-scale 1.0";
   const SD_SERVER_LISTEN_COMMAND = "--listen-ip 0.0.0.0 --listen-port 8080";
+  const SD_SERVER_EXAMPLES = [
+    {
+      title: {
+        en: "Minimal standalone diffusion example",
+        "zh-CN": "基础独立 diffusion 示例",
+        "zh-TW": "基礎獨立 diffusion 示例",
+        ja: "基本的な standalone diffusion 例",
+        ko: "기본 standalone diffusion 예시"
+      },
+      description: {
+        en: "A balanced starter command using a standalone diffusion model, VAE, LLM text encoder, flash attention, and CPU offload.",
+        "zh-CN": "适合入门排查的平衡型命令，包含独立 diffusion 模型、VAE、LLM 文本编码器、flash attention 和 CPU offload。",
+        "zh-TW": "適合入門排查的平衡型命令，包含獨立 diffusion 模型、VAE、LLM 文字編碼器、flash attention 與 CPU offload。",
+        ja: "standalone diffusion model、VAE、LLM テキストエンコーダー、flash attention、CPU offload をまとめた始めやすい例です。",
+        ko: "standalone diffusion model, VAE, LLM 텍스트 인코더, flash attention, CPU offload 를 함께 쓰는 시작용 예시입니다."
+      },
+      command: SD_SERVER_START_COMMAND
+    },
+    {
+      title: {
+        en: "Your local Windows example",
+        "zh-CN": "你的本地 Windows 示例",
+        "zh-TW": "你的本地 Windows 示例",
+        ja: "あなたのローカル Windows 例",
+        ko: "사용자 Windows 로컬 예시"
+      },
+      description: {
+        en: "This is the exact style of command you shared: local absolute model paths plus --fa for full flash attention.",
+        "zh-CN": "这里直接放入了你提供的命令风格：本地绝对模型路径，并使用 `--fa` 启用完整 flash attention。",
+        "zh-TW": "這裡直接放入你提供的命令風格：本地絕對模型路徑，並使用 `--fa` 啟用完整 flash attention。",
+        ja: "あなたが共有した形そのままの例です。ローカル絶対パスでモデルを指定し、`--fa` で full flash attention を有効にします。",
+        ko: "사용자가 준 형태를 그대로 담은 예시입니다. 로컬 절대 경로로 모델을 지정하고 `--fa` 로 전체 flash attention 을 켭니다."
+      },
+      command: './sd-server --diffusion-model "C:\\Users\\xkw19\\Downloads\\anima-preview3-base.safetensors" --llm "C:\\Users\\xkw19\\Downloads\\qwen_3_06b_base.safetensors" --vae "C:\\Users\\xkw19\\Downloads\\qwen_image_vae.safetensors" --fa'
+    },
+    {
+      title: {
+        en: "Expose on another port for a separate frontend",
+        "zh-CN": "给独立前端使用的自定义端口示例",
+        "zh-TW": "給獨立前端使用的自定義連接埠示例",
+        ja: "別ポートで公開する例",
+        ko: "별도 프런트엔드용 사용자 포트 예시"
+      },
+      description: {
+        en: "Useful when this standalone WebUI is hosted separately and you want sd-server to listen on every interface at port 8080.",
+        "zh-CN": "如果这个独立 WebUI 单独托管，而你希望 sd-server 在所有网卡的 8080 端口监听，可以参考这条命令。",
+        "zh-TW": "如果這個獨立 WebUI 是另外託管，而你希望 sd-server 在所有網卡的 8080 連接埠監聽，可以參考這條命令。",
+        ja: "この standalone WebUI を別配信し、sd-server を 8080 番ポートで全インターフェース待受けにしたい場合の例です。",
+        ko: "이 standalone WebUI 를 별도로 호스팅하고 sd-server 를 모든 인터페이스의 8080 포트에서 열고 싶을 때 참고할 수 있습니다."
+      },
+      command: '.\\sd-server.exe --diffusion-model ".\\models\\diffusion_models\\model.safetensors" --llm ".\\models\\text_encoders\\text-encoder.safetensors" --vae ".\\models\\vae\\vae.safetensors" --listen-ip 0.0.0.0 --listen-port 8080 --offload-to-cpu -v'
+    }
+  ];
+  const SD_SERVER_PARAM_GROUPS = [
+    {
+      title: {
+        en: "Svr Options",
+        "zh-CN": "服务端选项",
+        "zh-TW": "服務端選項",
+        ja: "サーバーオプション",
+        ko: "서버 옵션"
+      },
+      options: []
+    },
+    {
+      title: {
+        en: "Context Options",
+        "zh-CN": "上下文与模型选项",
+        "zh-TW": "上下文與模型選項",
+        ja: "コンテキスト / モデルオプション",
+        ko: "컨텍스트 / 모델 옵션"
+      },
+      options: []
+    },
+    {
+      title: {
+        en: "Default Generation Options",
+        "zh-CN": "默认生成参数",
+        "zh-TW": "預設生成參數",
+        ja: "既定の生成オプション",
+        ko: "기본 생성 옵션"
+      },
+      options: []
+    }
+  ];
+  SD_SERVER_PARAM_GROUPS[0].options.push(
+    { flag: "-l, --listen-ip <string>", desc: { en: "Server listen IP. Default is 127.0.0.1.", "zh-CN": "服务监听 IP，默认是 127.0.0.1。", "zh-TW": "服務監聽 IP，預設是 127.0.0.1。", ja: "サーバーの listen IP。既定値は 127.0.0.1 です。", ko: "서버 listen IP 입니다. 기본값은 127.0.0.1 입니다." } },
+    { flag: "--serve-html-path <string>", desc: { en: "Serve a custom index.html at root instead of the embedded frontend.", "zh-CN": "在根路径提供自定义 `index.html`，而不是使用内嵌前端。", "zh-TW": "在根路徑提供自定義 `index.html`，而不是使用內嵌前端。", ja: "埋め込みフロントエンドの代わりに、任意の `index.html` をルートで配信します。", ko: "내장 프런트엔드 대신 사용자 지정 `index.html` 을 루트에서 제공합니다." } },
+    { flag: "--listen-port <int>", desc: { en: "Server listen port. Default is 1234.", "zh-CN": "服务监听端口，默认是 1234。", "zh-TW": "服務監聽連接埠，預設是 1234。", ja: "サーバーの listen ポート。既定値は 1234 です。", ko: "서버 listen 포트입니다. 기본값은 1234 입니다." } },
+    { flag: "-v, --verbose", desc: { en: "Print extra runtime information.", "zh-CN": "输出更详细的运行信息。", "zh-TW": "輸出更詳細的執行資訊。", ja: "より詳細な実行情報を表示します。", ko: "더 자세한 실행 정보를 출력합니다." } },
+    { flag: "--color", desc: { en: "Use colored log tags by level.", "zh-CN": "按日志级别使用彩色标签。", "zh-TW": "依日誌級別使用彩色標籤。", ja: "ログレベルごとに色付きタグを使います。", ko: "로그 레벨별로 색상이 있는 태그를 사용합니다." } },
+    { flag: "-h, --help", desc: { en: "Show help and exit.", "zh-CN": "显示帮助并退出。", "zh-TW": "顯示說明並退出。", ja: "ヘルプを表示して終了します。", ko: "도움말을 표시하고 종료합니다." } }
+  );
+  SD_SERVER_PARAM_GROUPS[1].options.push(
+    { flag: "-m, --model <string>", desc: { en: "Path to a full monolithic model.", "zh-CN": "完整一体化模型文件路径。", "zh-TW": "完整一體化模型檔案路徑。", ja: "フル一体型モデルのパスです。", ko: "전체 일체형 모델 파일 경로입니다." } },
+    { flag: "--clip_l <string>", desc: { en: "Path to the CLIP-L text encoder.", "zh-CN": "CLIP-L 文本编码器路径。", "zh-TW": "CLIP-L 文字編碼器路徑。", ja: "CLIP-L テキストエンコーダーのパスです。", ko: "CLIP-L 텍스트 인코더 경로입니다." } },
+    { flag: "--clip_g <string>", desc: { en: "Path to the CLIP-G text encoder.", "zh-CN": "CLIP-G 文本编码器路径。", "zh-TW": "CLIP-G 文字編碼器路徑。", ja: "CLIP-G テキストエンコーダーのパスです。", ko: "CLIP-G 텍스트 인코더 경로입니다." } },
+    { flag: "--clip_vision <string>", desc: { en: "Path to the CLIP vision encoder.", "zh-CN": "CLIP 视觉编码器路径。", "zh-TW": "CLIP 視覺編碼器路徑。", ja: "CLIP vision エンコーダーのパスです。", ko: "CLIP 비전 인코더 경로입니다." } },
+    { flag: "--t5xxl <string>", desc: { en: "Path to the T5XXL text encoder.", "zh-CN": "T5XXL 文本编码器路径。", "zh-TW": "T5XXL 文字編碼器路徑。", ja: "T5XXL テキストエンコーダーのパスです。", ko: "T5XXL 텍스트 인코더 경로입니다." } },
+    { flag: "--llm <string>", desc: { en: "Path to the LLM text encoder used by pipelines such as Qwen-Image or Flux2.", "zh-CN": "LLM 文本编码器路径，例如 Qwen-Image 或 Flux2 这类流程会用到。", "zh-TW": "LLM 文字編碼器路徑，例如 Qwen-Image 或 Flux2 這類流程會用到。", ja: "Qwen-Image や Flux2 などで使う LLM テキストエンコーダーのパスです。", ko: "Qwen-Image 나 Flux2 같은 파이프라인에서 쓰는 LLM 텍스트 인코더 경로입니다." } },
+    { flag: "--llm_vision <string>", desc: { en: "Path to the LLM vision transformer / visual encoder.", "zh-CN": "LLM 视觉编码器或视觉 Transformer 路径。", "zh-TW": "LLM 視覺編碼器或視覺 Transformer 路徑。", ja: "LLM の vision transformer / visual encoder のパスです。", ko: "LLM 비전 인코더 또는 비전 transformer 경로입니다." } },
+    { flag: "--qwen2vl <string>", desc: { en: "Deprecated alias of --llm.", "zh-CN": "`--llm` 的已废弃别名。", "zh-TW": "`--llm` 的已廢棄別名。", ja: "`--llm` の非推奨エイリアスです。", ko: "`--llm` 의 더 이상 권장되지 않는 별칭입니다." } },
+    { flag: "--qwen2vl_vision <string>", desc: { en: "Deprecated alias of --llm_vision.", "zh-CN": "`--llm_vision` 的已废弃别名。", "zh-TW": "`--llm_vision` 的已廢棄別名。", ja: "`--llm_vision` の非推奨エイリアスです。", ko: "`--llm_vision` 의 더 이상 권장되지 않는 별칭입니다." } },
+    { flag: "--diffusion-model <string>", desc: { en: "Path to the standalone diffusion model.", "zh-CN": "独立 diffusion 模型路径。", "zh-TW": "獨立 diffusion 模型路徑。", ja: "standalone diffusion model のパスです。", ko: "standalone diffusion model 경로입니다." } },
+    { flag: "--high-noise-diffusion-model <string>", desc: { en: "Path to the standalone high-noise diffusion model.", "zh-CN": "高噪声阶段 standalone diffusion 模型路径。", "zh-TW": "高噪聲階段 standalone diffusion 模型路徑。", ja: "high-noise 用 standalone diffusion model のパスです。", ko: "high-noise 단계용 standalone diffusion model 경로입니다." } },
+    { flag: "--vae <string>", desc: { en: "Path to a standalone VAE model.", "zh-CN": "独立 VAE 模型路径。", "zh-TW": "獨立 VAE 模型路徑。", ja: "standalone VAE モデルのパスです。", ko: "standalone VAE 모델 경로입니다." } },
+    { flag: "--taesd <string>", desc: { en: "Path to Tiny AutoEncoder for faster but lower-quality decoding.", "zh-CN": "Tiny AutoEncoder 路径，用于更快但质量较低的解码。", "zh-TW": "Tiny AutoEncoder 路徑，用於更快但品質較低的解碼。", ja: "高速だが低品質寄りのデコード用 Tiny AutoEncoder のパスです。", ko: "더 빠르지만 품질은 낮을 수 있는 Tiny AutoEncoder 경로입니다." } },
+    { flag: "--tae <string>", desc: { en: "Alias of --taesd.", "zh-CN": "`--taesd` 的别名。", "zh-TW": "`--taesd` 的別名。", ja: "`--taesd` のエイリアスです。", ko: "`--taesd` 의 별칭입니다." } },
+    { flag: "--control-net <string>", desc: { en: "Path to a ControlNet model.", "zh-CN": "ControlNet 模型路径。", "zh-TW": "ControlNet 模型路徑。", ja: "ControlNet モデルのパスです。", ko: "ControlNet 모델 경로입니다." } },
+    { flag: "--embd-dir <string>", desc: { en: "Embeddings directory path.", "zh-CN": "embeddings 目录路径。", "zh-TW": "embeddings 目錄路徑。", ja: "embeddings ディレクトリのパスです。", ko: "embeddings 디렉터리 경로입니다." } },
+    { flag: "--lora-model-dir <string>", desc: { en: "LoRA model directory path.", "zh-CN": "LoRA 模型目录路径。", "zh-TW": "LoRA 模型目錄路徑。", ja: "LoRA モデルディレクトリのパスです。", ko: "LoRA 모델 디렉터리 경로입니다." } },
+    { flag: "--tensor-type-rules <string>", desc: { en: "Per-tensor weight type rules, for example '^vae.=f16,model.=q8_0'.", "zh-CN": "按张量模式指定权重类型，例如 `^vae.=f16,model.=q8_0`。", "zh-TW": "依張量模式指定權重型別，例如 `^vae.=f16,model.=q8_0`。", ja: "テンソルごとの重み型ルールです。例: `^vae.=f16,model.=q8_0`。", ko: "텐서 패턴별 가중치 타입 규칙입니다. 예: `^vae.=f16,model.=q8_0`." } },
+    { flag: "--photo-maker <string>", desc: { en: "Path to a PHOTOMAKER model.", "zh-CN": "PHOTOMAKER 模型路径。", "zh-TW": "PHOTOMAKER 模型路徑。", ja: "PHOTOMAKER モデルのパスです。", ko: "PHOTOMAKER 모델 경로입니다." } },
+    { flag: "--upscale-model <string>", desc: { en: "Path to an ESRGAN upscaler model.", "zh-CN": "ESRGAN 放大模型路径。", "zh-TW": "ESRGAN 放大模型路徑。", ja: "ESRGAN アップスケーラーモデルのパスです。", ko: "ESRGAN 업스케일 모델 경로입니다." } },
+    { flag: "-t, --threads <int>", desc: { en: "Number of compute threads. <= 0 means using CPU physical core count.", "zh-CN": "计算线程数。<= 0 时会使用 CPU 物理核心数。", "zh-TW": "計算執行緒數。<= 0 時會使用 CPU 實體核心數。", ja: "計算スレッド数です。<= 0 の場合は CPU 物理コア数が使われます。", ko: "연산 스레드 수입니다. <= 0 이면 CPU 물리 코어 수를 사용합니다." } },
+    { flag: "--chroma-t5-mask-pad <int>", desc: { en: "T5 mask padding size for Chroma pipelines.", "zh-CN": "Chroma 流程的 T5 mask padding 大小。", "zh-TW": "Chroma 流程的 T5 mask padding 大小。", ja: "Chroma 系パイプライン向け T5 mask padding サイズです。", ko: "Chroma 파이프라인용 T5 mask padding 크기입니다." } },
+    { flag: "--vae-tile-overlap <float>", desc: { en: "VAE tiling overlap ratio. Default is 0.5.", "zh-CN": "VAE 切片重叠比例，默认 0.5。", "zh-TW": "VAE 切片重疊比例，預設 0.5。", ja: "VAE タイル処理の重なり率です。既定値は 0.5。", ko: "VAE 타일 처리 겹침 비율입니다. 기본값은 0.5 입니다." } },
+    { flag: "--vae-tiling", desc: { en: "Process the VAE in tiles to reduce memory usage.", "zh-CN": "以切片方式处理 VAE 以降低内存占用。", "zh-TW": "以切片方式處理 VAE 以降低記憶體占用。", ja: "VAE をタイル処理してメモリ使用量を下げます。", ko: "VAE 를 타일 방식으로 처리해 메모리 사용량을 줄입니다." } },
+    { flag: "--force-sdxl-vae-conv-scale", desc: { en: "Force conv scale usage on SDXL VAE.", "zh-CN": "强制在 SDXL VAE 上使用 conv scale。", "zh-TW": "強制在 SDXL VAE 上使用 conv scale。", ja: "SDXL VAE で conv scale を強制使用します。", ko: "SDXL VAE 에서 conv scale 사용을 강제합니다." } }
+  );
+  SD_SERVER_PARAM_GROUPS[1].options.push(
+    { flag: "--offload-to-cpu", desc: { en: "Keep more weights in RAM to reduce VRAM pressure.", "zh-CN": "把更多权重放在内存中，以减轻显存压力。", "zh-TW": "把更多權重放在記憶體中，以減輕顯存壓力。", ja: "より多くの重みを RAM 側に置き、VRAM 圧迫を減らします。", ko: "더 많은 가중치를 RAM 에 두어 VRAM 부담을 줄입니다." } },
+    { flag: "--mmap", desc: { en: "Use memory-mapped model loading when available.", "zh-CN": "可用时使用内存映射方式加载模型。", "zh-TW": "可用時使用記憶體映射方式載入模型。", ja: "利用可能ならメモリマップでモデルを読み込みます。", ko: "가능하면 메모리 매핑 방식으로 모델을 로드합니다." } },
+    { flag: "--control-net-cpu", desc: { en: "Keep ControlNet on CPU for low-VRAM setups.", "zh-CN": "在低显存场景下把 ControlNet 放在 CPU。", "zh-TW": "在低顯存場景下把 ControlNet 放在 CPU。", ja: "低 VRAM 環境向けに ControlNet を CPU 側へ置きます。", ko: "저 VRAM 환경에서 ControlNet 을 CPU 에 둡니다." } },
+    { flag: "--clip-on-cpu", desc: { en: "Keep CLIP on CPU for low-VRAM setups.", "zh-CN": "在低显存场景下把 CLIP 放在 CPU。", "zh-TW": "在低顯存場景下把 CLIP 放在 CPU。", ja: "低 VRAM 環境向けに CLIP を CPU 側へ置きます。", ko: "저 VRAM 환경에서 CLIP 을 CPU 에 둡니다." } },
+    { flag: "--vae-on-cpu", desc: { en: "Keep VAE on CPU for low-VRAM setups.", "zh-CN": "在低显存场景下把 VAE 放在 CPU。", "zh-TW": "在低顯存場景下把 VAE 放在 CPU。", ja: "低 VRAM 環境向けに VAE を CPU 側へ置きます。", ko: "저 VRAM 환경에서 VAE 를 CPU 에 둡니다." } },
+    { flag: "--fa", desc: { en: "Enable full flash attention.", "zh-CN": "启用完整的 flash attention。", "zh-TW": "啟用完整的 flash attention。", ja: "full flash attention を有効にします。", ko: "전체 flash attention 을 켭니다." } },
+    { flag: "--diffusion-fa", desc: { en: "Enable flash attention only for the diffusion model.", "zh-CN": "只为 diffusion 模型启用 flash attention。", "zh-TW": "只為 diffusion 模型啟用 flash attention。", ja: "diffusion model 側だけ flash attention を有効にします。", ko: "diffusion model 쪽에만 flash attention 을 켭니다." } },
+    { flag: "--diffusion-conv-direct", desc: { en: "Use ggml_conv2d_direct in the diffusion model.", "zh-CN": "在 diffusion 模型中使用 `ggml_conv2d_direct`。", "zh-TW": "在 diffusion 模型中使用 `ggml_conv2d_direct`。", ja: "diffusion model で `ggml_conv2d_direct` を使います。", ko: "diffusion model 에서 `ggml_conv2d_direct` 를 사용합니다." } },
+    { flag: "--vae-conv-direct", desc: { en: "Use ggml_conv2d_direct in the VAE model.", "zh-CN": "在 VAE 模型中使用 `ggml_conv2d_direct`。", "zh-TW": "在 VAE 模型中使用 `ggml_conv2d_direct`。", ja: "VAE model で `ggml_conv2d_direct` を使います。", ko: "VAE model 에서 `ggml_conv2d_direct` 를 사용합니다." } },
+    { flag: "--circular", desc: { en: "Enable circular padding for convolutions.", "zh-CN": "为卷积启用 circular padding。", "zh-TW": "為卷積啟用 circular padding。", ja: "畳み込みで circular padding を有効にします。", ko: "컨볼루션에 circular padding 을 켭니다." } },
+    { flag: "--circularx", desc: { en: "Enable circular RoPE wrapping only on the X axis.", "zh-CN": "只在 X 轴启用 circular RoPE wrapping。", "zh-TW": "只在 X 軸啟用 circular RoPE wrapping。", ja: "X 軸方向だけ circular RoPE wrapping を有効にします。", ko: "X 축에만 circular RoPE wrapping 을 켭니다." } },
+    { flag: "--circulary", desc: { en: "Enable circular RoPE wrapping only on the Y axis.", "zh-CN": "只在 Y 轴启用 circular RoPE wrapping。", "zh-TW": "只在 Y 軸啟用 circular RoPE wrapping。", ja: "Y 軸方向だけ circular RoPE wrapping を有効にします。", ko: "Y 축에만 circular RoPE wrapping 을 켭니다." } },
+    { flag: "--chroma-disable-dit-mask", desc: { en: "Disable the DiT mask in Chroma.", "zh-CN": "在 Chroma 中禁用 DiT mask。", "zh-TW": "在 Chroma 中禁用 DiT mask。", ja: "Chroma で DiT mask を無効にします。", ko: "Chroma 에서 DiT mask 를 끕니다." } },
+    { flag: "--qwen-image-zero-cond-t", desc: { en: "Enable zero_cond_t for Qwen Image pipelines.", "zh-CN": "为 Qwen Image 流程启用 `zero_cond_t`。", "zh-TW": "為 Qwen Image 流程啟用 `zero_cond_t`。", ja: "Qwen Image 系パイプラインで `zero_cond_t` を有効にします。", ko: "Qwen Image 파이프라인에서 `zero_cond_t` 를 켭니다." } },
+    { flag: "--chroma-enable-t5-mask", desc: { en: "Enable the T5 mask in Chroma.", "zh-CN": "在 Chroma 中启用 T5 mask。", "zh-TW": "在 Chroma 中啟用 T5 mask。", ja: "Chroma で T5 mask を有効にします。", ko: "Chroma 에서 T5 mask 를 켭니다." } },
+    { flag: "--type <string>", desc: { en: "Override weight type such as f16, q8_0, q4_K, and so on.", "zh-CN": "覆盖权重类型，例如 f16、q8_0、q4_K 等。", "zh-TW": "覆蓋權重型別，例如 f16、q8_0、q4_K 等。", ja: "f16、q8_0、q4_K などの重み型を上書き指定します。", ko: "f16, q8_0, q4_K 같은 가중치 타입을 덮어씁니다." } },
+    { flag: "--rng <string>", desc: { en: "Choose RNG backend: std_default, cuda, or cpu.", "zh-CN": "选择 RNG 后端：`std_default`、`cuda` 或 `cpu`。", "zh-TW": "選擇 RNG 後端：`std_default`、`cuda` 或 `cpu`。", ja: "RNG backend を `std_default`、`cuda`、`cpu` から選びます。", ko: "RNG 백엔드를 `std_default`, `cuda`, `cpu` 중에서 고릅니다." } },
+    { flag: "--sampler-rng <string>", desc: { en: "Sampler RNG backend. If omitted, uses --rng.", "zh-CN": "采样器的 RNG 后端；省略时跟随 `--rng`。", "zh-TW": "採樣器的 RNG 後端；省略時跟隨 `--rng`。", ja: "sampler 用 RNG backend です。省略時は `--rng` を使います。", ko: "샘플러용 RNG 백엔드입니다. 생략하면 `--rng` 를 사용합니다." } },
+    { flag: "--prediction <string>", desc: { en: "Prediction type override such as eps, v, edm_v, sd3_flow, flux_flow, or flux2_flow.", "zh-CN": "覆盖 prediction 类型，例如 eps、v、edm_v、sd3_flow、flux_flow、flux2_flow。", "zh-TW": "覆蓋 prediction 型別，例如 eps、v、edm_v、sd3_flow、flux_flow、flux2_flow。", ja: "eps、v、edm_v、sd3_flow、flux_flow、flux2_flow などの prediction type を上書きします。", ko: "eps, v, edm_v, sd3_flow, flux_flow, flux2_flow 같은 prediction type 을 덮어씁니다." } },
+    { flag: "--lora-apply-mode <string>", desc: { en: "LoRA apply mode: auto, immediately, or at_runtime. Auto picks at_runtime for quantized weights.", "zh-CN": "LoRA 应用方式：`auto`、`immediately`、`at_runtime`；量化权重时 `auto` 会倾向 `at_runtime`。", "zh-TW": "LoRA 套用方式：`auto`、`immediately`、`at_runtime`；量化權重時 `auto` 會傾向 `at_runtime`。", ja: "LoRA の適用モードです。`auto`、`immediately`、`at_runtime` から選び、量子化重みでは `auto` が `at_runtime` を選びやすくなります。", ko: "LoRA 적용 모드입니다. `auto`, `immediately`, `at_runtime` 중에서 고르며, 양자화 가중치에서는 `auto` 가 `at_runtime` 을 선택하기 쉽습니다." } },
+    { flag: "--vae-tile-size <string>", desc: { en: "VAE tile size in [X]x[Y] format. Default is 32x32.", "zh-CN": "VAE 切片大小，格式为 `[X]x[Y]`，默认 32x32。", "zh-TW": "VAE 切片大小，格式為 `[X]x[Y]`，預設 32x32。", ja: "VAE タイルサイズです。形式は `[X]x[Y]`、既定値は 32x32。", ko: "VAE 타일 크기입니다. 형식은 `[X]x[Y]`, 기본값은 32x32 입니다." } },
+    { flag: "--vae-relative-tile-size <string>", desc: { en: "Relative VAE tile size. Values < 1 are fractions of image size; values >= 1 mean tiles per dimension.", "zh-CN": "相对 VAE 切片大小；< 1 表示图像尺寸比例，>= 1 表示每个维度的切片数。", "zh-TW": "相對 VAE 切片大小；< 1 表示圖像尺寸比例，>= 1 表示每個維度的切片數。", ja: "相対 VAE タイルサイズです。< 1 は画像サイズ比、>= 1 は各次元のタイル数を意味します。", ko: "상대 VAE 타일 크기입니다. < 1 은 이미지 크기 비율, >= 1 은 각 차원의 타일 개수를 의미합니다." } }
+  );
+  SD_SERVER_PARAM_GROUPS[2].options.push(
+    { flag: "-p, --prompt <string>", desc: { en: "Prompt text to render.", "zh-CN": "要生成的 prompt 文本。", "zh-TW": "要生成的 prompt 文字。", ja: "生成に使う prompt テキストです。", ko: "생성에 사용할 prompt 텍스트입니다." } },
+    { flag: "-n, --negative-prompt <string>", desc: { en: "Negative prompt text.", "zh-CN": "negative prompt 文本。", "zh-TW": "negative prompt 文字。", ja: "negative prompt テキストです。", ko: "negative prompt 텍스트입니다." } },
+    { flag: "-i, --init-img <string>", desc: { en: "Path to the init image.", "zh-CN": "初始图像路径。", "zh-TW": "初始圖像路徑。", ja: "初期画像のパスです。", ko: "초기 이미지 경로입니다." } },
+    { flag: "--end-img <string>", desc: { en: "Path to the end image, required by flf2v workflows.", "zh-CN": "结束图像路径，`flf2v` 流程需要。", "zh-TW": "結束圖像路徑，`flf2v` 流程需要。", ja: "end image のパスで、flf2v ワークフローで必要です。", ko: "종료 이미지 경로이며 flf2v 워크플로에서 필요합니다." } },
+    { flag: "--mask <string>", desc: { en: "Path to the mask image.", "zh-CN": "mask 图像路径。", "zh-TW": "mask 圖像路徑。", ja: "mask 画像のパスです。", ko: "mask 이미지 경로입니다." } },
+    { flag: "--control-image <string>", desc: { en: "Path to a ControlNet control image.", "zh-CN": "ControlNet 控制图路径。", "zh-TW": "ControlNet 控制圖路徑。", ja: "ControlNet 用 control image のパスです。", ko: "ControlNet 제어 이미지 경로입니다." } },
+    { flag: "--control-video <string>", desc: { en: "Directory of control video frames stored in lexicographic order, such as 00.png, 01.png, etc.", "zh-CN": "控制视频帧目录，内部图片需按字典序排列，例如 00.png、01.png。", "zh-TW": "控制影片影格目錄，內部圖片需按字典序排列，例如 00.png、01.png。", ja: "control video フレームのディレクトリです。00.png、01.png のように辞書順で並ぶ必要があります。", ko: "제어 비디오 프레임 디렉터리입니다. 00.png, 01.png 처럼 사전식 순서로 정렬되어 있어야 합니다." } },
+    { flag: "--pm-id-images-dir <string>", desc: { en: "Directory of PHOTOMAKER input identity images.", "zh-CN": "PHOTOMAKER 输入身份图目录。", "zh-TW": "PHOTOMAKER 輸入身份圖目錄。", ja: "PHOTOMAKER 用 ID 画像ディレクトリです。", ko: "PHOTOMAKER 입력 ID 이미지 디렉터리입니다." } },
+    { flag: "--pm-id-embed-path <string>", desc: { en: "Path to PHOTOMAKER v2 identity embedding.", "zh-CN": "PHOTOMAKER v2 身份 embedding 路径。", "zh-TW": "PHOTOMAKER v2 身份 embedding 路徑。", ja: "PHOTOMAKER v2 の ID embedding パスです。", ko: "PHOTOMAKER v2 ID embedding 경로입니다." } },
+    { flag: "-H, --height <int>", desc: { en: "Image height in pixels. Default is 512.", "zh-CN": "图像高度，单位像素，默认 512。", "zh-TW": "圖像高度，單位像素，預設 512。", ja: "画像高さ（ピクセル）です。既定値は 512。", ko: "이미지 높이(픽셀)입니다. 기본값은 512 입니다." } },
+    { flag: "-W, --width <int>", desc: { en: "Image width in pixels. Default is 512.", "zh-CN": "图像宽度，单位像素，默认 512。", "zh-TW": "圖像寬度，單位像素，預設 512。", ja: "画像幅（ピクセル）です。既定値は 512。", ko: "이미지 너비(픽셀)입니다. 기본값은 512 입니다." } },
+    { flag: "--steps <int>", desc: { en: "Sample step count. Default is 20.", "zh-CN": "采样步数，默认 20。", "zh-TW": "採樣步數，預設 20。", ja: "サンプルステップ数です。既定値は 20。", ko: "샘플링 스텝 수입니다. 기본값은 20 입니다." } },
+    { flag: "--high-noise-steps <int>", desc: { en: "High-noise sample steps. -1 means auto.", "zh-CN": "高噪声阶段步数，`-1` 表示自动。", "zh-TW": "高噪聲階段步數，`-1` 表示自動。", ja: "high-noise 側のステップ数です。`-1` は自動。", ko: "high-noise 단계 스텝 수입니다. `-1` 은 자동입니다." } },
+    { flag: "--clip-skip <int>", desc: { en: "Skip the last CLIP layers. 1 means none, 2 skips one layer.", "zh-CN": "跳过最后几层 CLIP；1 表示不跳，2 表示跳过一层。", "zh-TW": "跳過最後幾層 CLIP；1 表示不跳，2 表示跳過一層。", ja: "最後の CLIP 層をスキップします。1 は未スキップ、2 は 1 層スキップです。", ko: "마지막 CLIP 레이어를 건너뜁니다. 1 은 건너뛰지 않음, 2 는 한 레이어를 건너뜁니다." } },
+    { flag: "-b, --batch-count <int>", desc: { en: "Batch count.", "zh-CN": "batch 数量。", "zh-TW": "batch 數量。", ja: "batch 数です。", ko: "batch 수입니다." } },
+    { flag: "--video-frames <int>", desc: { en: "Video frame count. Default is 1.", "zh-CN": "视频帧数，默认 1。", "zh-TW": "影片影格數，預設 1。", ja: "動画フレーム数です。既定値は 1。", ko: "비디오 프레임 수입니다. 기본값은 1 입니다." } },
+    { flag: "--fps <int>", desc: { en: "Frames per second. Default is 24.", "zh-CN": "帧率，默认 24。", "zh-TW": "幀率，預設 24。", ja: "fps です。既定値は 24。", ko: "fps 입니다. 기본값은 24 입니다." } },
+    { flag: "--timestep-shift <int>", desc: { en: "Shift timestep for NitroFusion models.", "zh-CN": "NitroFusion 模型的 timestep shift。", "zh-TW": "NitroFusion 模型的 timestep shift。", ja: "NitroFusion モデル向け timestep shift です。", ko: "NitroFusion 모델용 timestep shift 입니다." } },
+    { flag: "--upscale-repeats <int>", desc: { en: "How many times to run ESRGAN upscaling. Default is 1.", "zh-CN": "ESRGAN 放大的重复次数，默认 1。", "zh-TW": "ESRGAN 放大的重複次數，預設 1。", ja: "ESRGAN アップスケーリングを何回実行するか。既定値は 1。", ko: "ESRGAN 업스케일을 몇 번 실행할지 설정합니다. 기본값은 1 입니다." } },
+    { flag: "--upscale-tile-size <int>", desc: { en: "Tile size for ESRGAN upscaling. Default is 128.", "zh-CN": "ESRGAN 放大的 tile 大小，默认 128。", "zh-TW": "ESRGAN 放大的 tile 大小，預設 128。", ja: "ESRGAN アップスケールの tile サイズです。既定値は 128。", ko: "ESRGAN 업스케일 tile 크기입니다. 기본값은 128 입니다." } }
+  );
+  SD_SERVER_PARAM_GROUPS[2].options.push(
+    { flag: "--cfg-scale <float>", desc: { en: "Unconditional guidance scale. Default is 7.0.", "zh-CN": "无条件引导强度，默认 7.0。", "zh-TW": "無條件引導強度，預設 7.0。", ja: "unconditional guidance scale です。既定値は 7.0。", ko: "unconditional guidance scale 입니다. 기본값은 7.0 입니다." } },
+    { flag: "--img-cfg-scale <float>", desc: { en: "Image guidance scale for inpaint or instruct-pix2pix. Defaults to --cfg-scale.", "zh-CN": "inpaint 或 instruct-pix2pix 的图像引导强度；默认跟随 `--cfg-scale`。", "zh-TW": "inpaint 或 instruct-pix2pix 的圖像引導強度；預設跟隨 `--cfg-scale`。", ja: "inpaint や instruct-pix2pix 用 image guidance scale です。既定では `--cfg-scale` を使います。", ko: "inpaint 또는 instruct-pix2pix 용 image guidance scale 입니다. 기본적으로 `--cfg-scale` 을 따릅니다." } },
+    { flag: "--guidance <float>", desc: { en: "Distilled guidance scale. Default is 3.5.", "zh-CN": "蒸馏 guidance 强度，默认 3.5。", "zh-TW": "蒸餾 guidance 強度，預設 3.5。", ja: "distilled guidance scale です。既定値は 3.5。", ko: "distilled guidance scale 입니다. 기본값은 3.5 입니다." } },
+    { flag: "--slg-scale <float>", desc: { en: "Skip Layer Guidance scale for DiT models.", "zh-CN": "DiT 模型的 Skip Layer Guidance 强度。", "zh-TW": "DiT 模型的 Skip Layer Guidance 強度。", ja: "DiT モデル向け Skip Layer Guidance scale です。", ko: "DiT 모델용 Skip Layer Guidance scale 입니다." } },
+    { flag: "--skip-layer-start <float>", desc: { en: "SLG start point. Default is 0.01.", "zh-CN": "SLG 起始点，默认 0.01。", "zh-TW": "SLG 起始點，預設 0.01。", ja: "SLG 開始位置です。既定値は 0.01。", ko: "SLG 시작 지점입니다. 기본값은 0.01 입니다." } },
+    { flag: "--skip-layer-end <float>", desc: { en: "SLG end point. Default is 0.2.", "zh-CN": "SLG 结束点，默认 0.2。", "zh-TW": "SLG 結束點，預設 0.2。", ja: "SLG 終了位置です。既定値は 0.2。", ko: "SLG 종료 지점입니다. 기본값은 0.2 입니다." } },
+    { flag: "--eta <float>", desc: { en: "Noise multiplier used by certain samplers.", "zh-CN": "部分采样器使用的噪声乘数。", "zh-TW": "部分採樣器使用的噪聲乘數。", ja: "一部 sampler で使う noise multiplier です。", ko: "일부 샘플러가 사용하는 noise multiplier 입니다." } },
+    { flag: "--flow-shift <float>", desc: { en: "Flow-model shift value such as for SD3.x or WAN.", "zh-CN": "Flow 模型位移值，例如 SD3.x 或 WAN。", "zh-TW": "Flow 模型位移值，例如 SD3.x 或 WAN。", ja: "SD3.x や WAN などの Flow model 用 shift 値です。", ko: "SD3.x 또는 WAN 같은 Flow 모델용 shift 값입니다." } },
+    { flag: "--high-noise-cfg-scale <float>", desc: { en: "High-noise unconditional guidance scale.", "zh-CN": "高噪声阶段的无条件引导强度。", "zh-TW": "高噪聲階段的無條件引導強度。", ja: "high-noise 側の unconditional guidance scale です。", ko: "high-noise 단계의 unconditional guidance scale 입니다." } },
+    { flag: "--high-noise-img-cfg-scale <float>", desc: { en: "High-noise image guidance scale.", "zh-CN": "高噪声阶段的图像引导强度。", "zh-TW": "高噪聲階段的圖像引導強度。", ja: "high-noise 側の image guidance scale です。", ko: "high-noise 단계의 image guidance scale 입니다." } },
+    { flag: "--high-noise-guidance <float>", desc: { en: "High-noise distilled guidance scale.", "zh-CN": "高噪声阶段的蒸馏 guidance 强度。", "zh-TW": "高噪聲階段的蒸餾 guidance 強度。", ja: "high-noise 側の distilled guidance scale です。", ko: "high-noise 단계의 distilled guidance scale 입니다." } },
+    { flag: "--high-noise-slg-scale <float>", desc: { en: "High-noise SLG scale.", "zh-CN": "高噪声阶段的 SLG 强度。", "zh-TW": "高噪聲階段的 SLG 強度。", ja: "high-noise 側の SLG scale です。", ko: "high-noise 단계의 SLG scale 입니다." } },
+    { flag: "--high-noise-skip-layer-start <float>", desc: { en: "High-noise SLG start point.", "zh-CN": "高噪声阶段的 SLG 起始点。", "zh-TW": "高噪聲階段的 SLG 起始點。", ja: "high-noise 側の SLG 開始位置です。", ko: "high-noise 단계의 SLG 시작 지점입니다." } },
+    { flag: "--high-noise-skip-layer-end <float>", desc: { en: "High-noise SLG end point.", "zh-CN": "高噪声阶段的 SLG 结束点。", "zh-TW": "高噪聲階段的 SLG 結束點。", ja: "high-noise 側の SLG 終了位置です。", ko: "high-noise 단계의 SLG 종료 지점입니다." } },
+    { flag: "--high-noise-eta <float>", desc: { en: "High-noise noise multiplier.", "zh-CN": "高噪声阶段的噪声乘数。", "zh-TW": "高噪聲階段的噪聲乘數。", ja: "high-noise 側の noise multiplier です。", ko: "high-noise 단계의 noise multiplier 입니다." } },
+    { flag: "--strength <float>", desc: { en: "Noising / denoising strength. Default is 0.75.", "zh-CN": "加噪 / 去噪强度，默认 0.75。", "zh-TW": "加噪 / 去噪強度，預設 0.75。", ja: "noising / denoising 強度です。既定値は 0.75。", ko: "노이즈 / 디노이즈 강도입니다. 기본값은 0.75 입니다." } },
+    { flag: "--pm-style-strength <float>", desc: { en: "PHOTOMAKER style strength.", "zh-CN": "PHOTOMAKER 风格强度。", "zh-TW": "PHOTOMAKER 風格強度。", ja: "PHOTOMAKER の style strength です。", ko: "PHOTOMAKER 스타일 강도입니다." } },
+    { flag: "--control-strength <float>", desc: { en: "ControlNet strength. 1.0 means full destruction of init-image information.", "zh-CN": "ControlNet 强度；1.0 表示对初始图信息的完全破坏。", "zh-TW": "ControlNet 強度；1.0 表示對初始圖資訊的完全破壞。", ja: "ControlNet 強度です。1.0 は初期画像情報を完全に壊すレベルです。", ko: "ControlNet 강도입니다. 1.0 은 초기 이미지 정보를 완전히 파괴하는 수준입니다." } },
+    { flag: "--moe-boundary <float>", desc: { en: "Timestep boundary for Wan2.2 MoE models.", "zh-CN": "Wan2.2 MoE 模型的 timestep 边界。", "zh-TW": "Wan2.2 MoE 模型的 timestep 邊界。", ja: "Wan2.2 MoE モデル向け timestep boundary です。", ko: "Wan2.2 MoE 모델용 timestep boundary 입니다." } },
+    { flag: "--vace-strength <float>", desc: { en: "Wan VACE strength.", "zh-CN": "Wan VACE 强度。", "zh-TW": "Wan VACE 強度。", ja: "Wan VACE strength です。", ko: "Wan VACE 강도입니다." } }
+  );
+  SD_SERVER_PARAM_GROUPS[2].options.push(
+    { flag: "--increase-ref-index", desc: { en: "Automatically increment reference-image indices in listed order.", "zh-CN": "按列出顺序自动递增参考图索引。", "zh-TW": "按列出順序自動遞增參考圖索引。", ja: "列挙順に reference image の index を自動増加させます。", ko: "나열된 순서대로 reference image 인덱스를 자동 증가시킵니다." } },
+    { flag: "--disable-auto-resize-ref-image", desc: { en: "Disable automatic resize for reference images.", "zh-CN": "禁用参考图自动缩放。", "zh-TW": "禁用參考圖自動縮放。", ja: "reference image の自動リサイズを無効にします。", ko: "reference image 자동 리사이즈를 끕니다." } },
+    { flag: "--disable-image-metadata", desc: { en: "Do not embed generation metadata into output image files.", "zh-CN": "不要把生成元数据写入输出图像文件。", "zh-TW": "不要把生成中繼資料寫入輸出圖像檔案。", ja: "生成メタデータを出力画像へ埋め込まないようにします。", ko: "생성 메타데이터를 출력 이미지 파일에 넣지 않습니다." } },
+    { flag: "-s, --seed <int>", desc: { en: "RNG seed. Negative values mean random seed.", "zh-CN": "随机种子；负值表示随机种子。", "zh-TW": "隨機種子；負值表示隨機種子。", ja: "乱数シードです。負の値はランダムシードを意味します。", ko: "랜덤 시드입니다. 음수는 랜덤 시드를 의미합니다." } },
+    { flag: "--sampling-method <string>", desc: { en: "Primary sampler method such as euler, dpm++2m, lcm, tcd, and others.", "zh-CN": "主采样方法，例如 euler、dpm++2m、lcm、tcd 等。", "zh-TW": "主採樣方法，例如 euler、dpm++2m、lcm、tcd 等。", ja: "主 sampler 方法です。euler、dpm++2m、lcm、tcd などが使えます。", ko: "기본 샘플러 방식입니다. euler, dpm++2m, lcm, tcd 등을 사용할 수 있습니다." } },
+    { flag: "--high-noise-sampling-method <string>", desc: { en: "Sampler method for the high-noise stage.", "zh-CN": "高噪声阶段使用的采样方法。", "zh-TW": "高噪聲階段使用的採樣方法。", ja: "high-noise 段階で使う sampler 方法です。", ko: "high-noise 단계에 사용하는 샘플러 방식입니다." } },
+    { flag: "--scheduler <string>", desc: { en: "Sigma scheduler such as discrete, karras, exponential, ays, and others.", "zh-CN": "sigma 调度器，例如 discrete、karras、exponential、ays 等。", "zh-TW": "sigma 排程器，例如 discrete、karras、exponential、ays 等。", ja: "sigma scheduler です。discrete、karras、exponential、ays などが使えます。", ko: "sigma 스케줄러입니다. discrete, karras, exponential, ays 등을 사용할 수 있습니다." } },
+    { flag: "--sigmas <string>", desc: { en: "Comma-separated custom sigma values.", "zh-CN": "逗号分隔的自定义 sigma 值。", "zh-TW": "逗號分隔的自定義 sigma 值。", ja: "カンマ区切りの custom sigma 値です。", ko: "쉼표로 구분한 사용자 지정 sigma 값입니다." } },
+    { flag: "--skip-layers <string>", desc: { en: "Layers to skip for SLG steps.", "zh-CN": "SLG 阶段要跳过的层。", "zh-TW": "SLG 階段要跳過的層。", ja: "SLG ステップでスキップする層です。", ko: "SLG 단계에서 건너뛸 레이어입니다." } },
+    { flag: "--high-noise-skip-layers <string>", desc: { en: "Layers to skip during high-noise SLG steps.", "zh-CN": "高噪声 SLG 阶段要跳过的层。", "zh-TW": "高噪聲 SLG 階段要跳過的層。", ja: "high-noise SLG ステップでスキップする層です。", ko: "high-noise SLG 단계에서 건너뛸 레이어입니다." } },
+    { flag: "-r, --ref-image <string>", desc: { en: "Reference image for Flux Kontext models. Can be used multiple times.", "zh-CN": "Flux Kontext 模型的参考图，可重复使用多次。", "zh-TW": "Flux Kontext 模型的參考圖，可重複使用多次。", ja: "Flux Kontext モデル向け reference image です。複数回指定できます。", ko: "Flux Kontext 모델용 reference image 입니다. 여러 번 지정할 수 있습니다." } },
+    { flag: "--cache-mode <string>", desc: { en: "Caching method such as easycache, ucache, dbcache, taylorseer, cache-dit, or spectrum.", "zh-CN": "缓存方式，例如 easycache、ucache、dbcache、taylorseer、cache-dit、spectrum。", "zh-TW": "快取方式，例如 easycache、ucache、dbcache、taylorseer、cache-dit、spectrum。", ja: "cache 方式です。easycache、ucache、dbcache、taylorseer、cache-dit、spectrum などを使えます。", ko: "캐시 방식입니다. easycache, ucache, dbcache, taylorseer, cache-dit, spectrum 등을 사용할 수 있습니다." } },
+    { flag: "--cache-option <string>", desc: { en: "Comma-separated cache parameters. Supported keys depend on cache mode.", "zh-CN": "逗号分隔的缓存参数；支持的键取决于 cache mode。", "zh-TW": "逗號分隔的快取參數；支援的鍵取決於 cache mode。", ja: "カンマ区切りの cache パラメータです。使えるキーは cache mode に依存します。", ko: "쉼표로 구분한 캐시 파라미터입니다. 사용할 수 있는 키는 cache mode 에 따라 달라집니다." } },
+    { flag: "--scm-mask <string>", desc: { en: "Comma-separated 0/1 SCM step mask for cache-dit.", "zh-CN": "cache-dit 使用的 0/1 逗号分隔 SCM 步骤 mask。", "zh-TW": "cache-dit 使用的 0/1 逗號分隔 SCM 步驟 mask。", ja: "cache-dit 用の 0/1 カンマ区切り SCM step mask です。", ko: "cache-dit 용 0/1 쉼표 구분 SCM step mask 입니다." } },
+    { flag: "--scm-policy <string>", desc: { en: "SCM policy: dynamic or static.", "zh-CN": "SCM 策略：`dynamic` 或 `static`。", "zh-TW": "SCM 策略：`dynamic` 或 `static`。", ja: "SCM policy です。`dynamic` または `static`。", ko: "SCM 정책입니다. `dynamic` 또는 `static`." } }
+  );
 
   const PALETTES = {
     green: { hue: 142, sat: "46%", light: "42%" },
@@ -884,7 +1089,7 @@
     }
 
     if (stepKey === "server") {
-      return `<article class="wizard-panel"><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></article><div class="wizard-grid wizard-grid-2"><article class="wizard-card"><h4>${escapeHtml(t("wizardServerDownloadTitle"))}</h4><p>${escapeHtml(t("wizardServerDownloadDesc"))}</p><p><a class="wizard-link" href="${escapeAttr(SDCPP_REPO_URL)}" target="_blank" rel="noreferrer noopener">${escapeHtml(SDCPP_REPO_URL)}</a></p><p><a class="wizard-link" href="${escapeAttr(SDCPP_RELEASES_URL)}" target="_blank" rel="noreferrer noopener">${escapeHtml(SDCPP_RELEASES_URL)}</a></p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerMatchTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerMatch1"))}</li><li>${escapeHtml(t("wizardServerMatch2"))}</li><li>${escapeHtml(t("wizardServerMatch3"))}</li><li>${escapeHtml(t("wizardServerMatch4"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerPrepareTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerPrepare1"))}</li><li>${escapeHtml(t("wizardServerPrepare2"))}</li><li>${escapeHtml(t("wizardServerPrepare3"))}</li><li>${escapeHtml(t("wizardServerPrepare4"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerLaunchTitle"))}</h4><p>${escapeHtml(t("wizardServerLaunchDesc"))}</p><div class="wizard-code-label">${escapeHtml(t("wizardServerExampleLabel"))}</div><pre class="wizard-code">${escapeHtml(SD_SERVER_START_COMMAND)}</pre></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerParamsTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerItem1"))}</li><li>${escapeHtml(t("wizardServerItem2"))}</li><li>${escapeHtml(t("wizardServerItem3"))}</li><li>${escapeHtml(t("wizardServerItem5"))}</li><li>${escapeHtml(t("wizardServerItem6"))}</li><li>${escapeHtml(t("wizardServerItem7"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerReadyTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerItem4"))}</li><li><code>http://127.0.0.1:1234/</code></li><li><code>/sdcpp/v1</code>, <code>/v1</code>, <code>/sdapi/v1</code></li><li>${escapeHtml(t("wizardServerReadyHint"))}</li></ul></article></div><div class="wizard-note">${escapeHtml(t("wizardServerHint"))}</div>`;
+      return `<article class="wizard-panel"><h3>${escapeHtml(t(step.titleKey))}</h3><p>${escapeHtml(t(step.descKey))}</p></article><div class="wizard-grid wizard-grid-2"><article class="wizard-card"><h4>${escapeHtml(t("wizardServerDownloadTitle"))}</h4><p>${escapeHtml(t("wizardServerDownloadDesc"))}</p><p><a class="wizard-link" href="${escapeAttr(SDCPP_REPO_URL)}" target="_blank" rel="noreferrer noopener">${escapeHtml(SDCPP_REPO_URL)}</a></p><p><a class="wizard-link" href="${escapeAttr(SDCPP_RELEASES_URL)}" target="_blank" rel="noreferrer noopener">${escapeHtml(SDCPP_RELEASES_URL)}</a></p></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerMatchTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerMatch1"))}</li><li>${escapeHtml(t("wizardServerMatch2"))}</li><li>${escapeHtml(t("wizardServerMatch3"))}</li><li>${escapeHtml(t("wizardServerMatch4"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerPrepareTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerPrepare1"))}</li><li>${escapeHtml(t("wizardServerPrepare2"))}</li><li>${escapeHtml(t("wizardServerPrepare3"))}</li><li>${escapeHtml(t("wizardServerPrepare4"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerLaunchTitle"))}</h4><p>${escapeHtml(t("wizardServerLaunchDesc"))}</p><div class="wizard-code-label">${escapeHtml(t("wizardServerExampleLabel"))}</div><pre class="wizard-code">${escapeHtml(SD_SERVER_START_COMMAND)}</pre></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerParamsTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerItem1"))}</li><li>${escapeHtml(t("wizardServerItem2"))}</li><li>${escapeHtml(t("wizardServerItem3"))}</li><li>${escapeHtml(t("wizardServerItem5"))}</li><li>${escapeHtml(t("wizardServerItem6"))}</li><li>${escapeHtml(t("wizardServerItem7"))}</li></ul></article><article class="wizard-card"><h4>${escapeHtml(t("wizardServerReadyTitle"))}</h4><ul class="wizard-list"><li>${escapeHtml(t("wizardServerItem4"))}</li><li><code>http://127.0.0.1:1234/</code></li><li><code>/sdcpp/v1</code>, <code>/v1</code>, <code>/sdapi/v1</code></li><li>${escapeHtml(t("wizardServerReadyHint"))}</li></ul></article></div><article class="wizard-panel"><h3>${escapeHtml(t("wizardServerExamplesTitle"))}</h3><p>${escapeHtml(t("wizardServerExamplesDesc"))}</p></article>${renderServerExamples()}<article class="wizard-panel"><h3>${escapeHtml(t("wizardServerAllParamsTitle"))}</h3><p>${escapeHtml(t("wizardServerAllParamsDesc"))}</p></article>${renderServerParameterGroups()}<div class="wizard-note">${escapeHtml(t("wizardServerHint"))}</div>`;
     }
 
     if (stepKey === "network") {
@@ -939,6 +1144,20 @@
       const statusClass = info.status === "ok" ? "ok" : info.status === "bad" ? "bad" : "";
       return `<article class="wizard-card"><div class="wizard-card-heading"><h4>${escapeHtml(label)}</h4><span class="pill ${statusClass}">${escapeHtml(statusText)}</span></div><p>${escapeHtml(info.detail || "-")}</p></article>`;
     }).join("")}</div>`;
+  }
+
+  function tl(value) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    return value[state.activeLanguage] || value.en || Object.values(value)[0] || "";
+  }
+
+  function renderServerExamples() {
+    return `<div class="wizard-grid wizard-grid-2">${SD_SERVER_EXAMPLES.map((item) => `<article class="wizard-card"><h4>${escapeHtml(tl(item.title))}</h4><p>${escapeHtml(tl(item.description))}</p><pre class="wizard-code">${escapeHtml(item.command)}</pre></article>`).join("")}</div>`;
+  }
+
+  function renderServerParameterGroups() {
+    return `<div class="wizard-grid">${SD_SERVER_PARAM_GROUPS.map((group, index) => `<details class="wizard-details"${index === 0 ? " open" : ""}><summary><span>${escapeHtml(tl(group.title))}</span><span class="wizard-details-count">${group.options.length}</span></summary><div class="wizard-param-list">${group.options.map((item) => `<article class="wizard-param-item"><code class="wizard-param-flag">${escapeHtml(item.flag)}</code><p>${escapeHtml(tl(item.desc))}</p></article>`).join("")}</div></details>`).join("")}</div>`;
   }
 
   function enhanceSliderControls() {
