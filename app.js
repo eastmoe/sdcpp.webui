@@ -570,6 +570,7 @@
   const state = {
     settings: loadJson(STORAGE_KEYS.settings, DEFAULT_SETTINGS),
     gallery: loadJson(STORAGE_KEYS.gallery, []),
+    directoryGallery: [],
     discoveries: loadJson(STORAGE_KEYS.discoveries, {}),
     formValues: loadJson(STORAGE_KEYS.formValues, {}),
     onboarding: { ...DEFAULT_ONBOARDING, ...loadJson(STORAGE_KEYS.onboarding, DEFAULT_ONBOARDING), isOpen: false },
@@ -583,6 +584,7 @@
     capabilities: null,
     gallerySelectedId: null,
     dirHandle: null,
+    directoryGalleryLoading: false,
     pollTimer: null,
     actualMode: "day",
     activeLanguage: "en"
@@ -854,6 +856,7 @@
     renderDiscoveryPanels();
     renderCapabilitiesSummary();
     renderGallery();
+    if (state.dirHandle) void refreshDirectoryGallery();
     renderOnboarding();
   }
 
@@ -2097,7 +2100,7 @@
   }
 
   function renderRecentHistory() {
-    const items = state.gallery.slice(0, 8);
+    const items = getGalleryItems().slice(0, 8);
     el.recentHistoryList.innerHTML = items.length
       ? items.map((item) => `<div class="history-row"><strong>${escapeHtml(item.endpoint)}</strong><span>${escapeHtml((item.prompt || "").slice(0, 110) || "-")}</span><code>${escapeHtml(formatTime(item.createdAt))}${item.fileName ? ` · ${escapeHtml(item.fileName)}` : ""}</code></div>`).join("")
       : `<div class="empty-state">${escapeHtml(t("recentEmpty"))}</div>`;
@@ -2105,7 +2108,7 @@
 
   function renderGallery() {
     const query = (el.gallerySearchInput.value || "").trim().toLowerCase();
-    const items = state.gallery.filter((item) => !query || [item.prompt, item.endpoint, item.fileName, item.apiFamily].join(" ").toLowerCase().includes(query));
+    const items = getGalleryItems().filter((item) => !query || [item.prompt, item.endpoint, item.fileName, item.apiFamily].join(" ").toLowerCase().includes(query));
     if (!items.length) {
       el.galleryGrid.innerHTML = `<div class="empty-state">${escapeHtml(t("noGallery"))}</div>`;
       el.galleryDetail.innerHTML = `<div class="empty-state">${escapeHtml(t("galleryDetailHint"))}</div>`;
@@ -2125,7 +2128,7 @@
   }
 
   async function renderGalleryDetail() {
-    const entry = state.gallery.find((item) => item.id === state.gallerySelectedId);
+    const entry = findGalleryEntryById(state.gallerySelectedId);
     if (!entry) {
       el.galleryDetail.innerHTML = `<div class="empty-state">${escapeHtml(t("galleryDetailHint"))}</div>`;
       return;
@@ -2149,6 +2152,29 @@
       }
     }
     return entry.thumbDataUrl;
+  }
+
+  function getGalleryItems() {
+    const seen = new Set();
+    const items = [];
+    for (const entry of state.gallery) {
+      const key = entry.fileName ? `file:${entry.fileName.toLowerCase()}` : `id:${entry.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(entry);
+    }
+    for (const entry of state.directoryGallery) {
+      const key = entry.fileName ? `file:${entry.fileName.toLowerCase()}` : `id:${entry.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(entry);
+    }
+    return items.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  }
+
+  function findGalleryEntryById(id) {
+    if (!id) return null;
+    return getGalleryItems().find((item) => item.id === id) || null;
   }
 
   async function openSavedFile(entry) {
@@ -2519,6 +2545,7 @@
       }
       state.dirHandle = handle;
       await saveDirectoryHandle(handle);
+      await refreshDirectoryGallery();
       updateHeroChips();
       renderOnboarding();
       toast("toastSuccess", "toastFolderBound", handle.name);
@@ -2530,6 +2557,7 @@
 
   async function forgetImgsDirectory() {
     state.dirHandle = null;
+    state.directoryGallery = [];
     try {
       const db = await openHandleDb();
       const tx = db.transaction("handles", "readwrite");
@@ -2540,11 +2568,14 @@
     }
     updateHeroChips();
     renderOnboarding();
+    renderGallery();
+    renderRecentHistory();
     toast("toastInfo", "toastFolderForgotten");
   }
 
   async function loadDirectoryHandle() {
     state.dirHandle = await getSavedDirectoryHandle();
+    await refreshDirectoryGallery();
     updateHeroChips();
     renderOnboarding();
   }
@@ -2553,6 +2584,90 @@
     if (!state.dirHandle) state.dirHandle = await getSavedDirectoryHandle();
     if (!state.dirHandle) return null;
     return (await ensurePermission(state.dirHandle, write)) ? state.dirHandle : null;
+  }
+
+  async function refreshDirectoryGallery() {
+    if (state.directoryGalleryLoading) return;
+    if (!state.dirHandle) {
+      state.directoryGallery = [];
+      renderGallery();
+      renderRecentHistory();
+      return;
+    }
+    state.directoryGalleryLoading = true;
+    try {
+      const handle = await ensureDirectoryHandle(false);
+      if (!handle) {
+        state.directoryGallery = [];
+        renderGallery();
+        renderRecentHistory();
+        return;
+      }
+      state.directoryGallery = await loadGalleryEntriesFromDirectory(handle);
+      renderGallery();
+      renderRecentHistory();
+    } catch (_error) {
+      state.directoryGallery = [];
+      renderGallery();
+      renderRecentHistory();
+    } finally {
+      state.directoryGalleryLoading = false;
+    }
+  }
+
+  async function loadGalleryEntriesFromDirectory(handle) {
+    const fileHandles = [];
+    for await (const [name, entryHandle] of handle.entries()) {
+      if (entryHandle.kind !== "file") continue;
+      if (!isGalleryImageFile(name)) continue;
+      fileHandles.push({ name, handle: entryHandle });
+    }
+
+    const loaded = [];
+    for (const item of fileHandles) {
+      try {
+        const file = await item.handle.getFile();
+        const metadata = await tryReadGalleryMetadata(handle, file.name);
+        const dataUrl = await fileToDataUrl(file);
+        loaded.push({
+          id: `dir:${file.name}`,
+          createdAt: metadata?.createdAt || file.lastModified || Date.now(),
+          apiFamily: metadata?.apiFamily || "imgs",
+          endpoint: metadata?.endpoint || t("folderGalleryLabel"),
+          prompt: metadata?.prompt || metadata?.parameters?.prompt || "",
+          parameters: metadata?.parameters || {},
+          fileName: file.name,
+          format: inferImageFormat(file.name, file.type),
+          saved: true,
+          thumbDataUrl: await createThumbnail(dataUrl),
+          jobId: metadata?.jobId || ""
+        });
+      } catch (_error) {
+        // Skip unreadable files and continue loading the rest of the folder.
+      }
+    }
+
+    return loaded.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  }
+
+  async function tryReadGalleryMetadata(dirHandle, imageFileName) {
+    try {
+      const metadataHandle = await dirHandle.getFileHandle(imageFileName.replace(/\.[^.]+$/, ".json"));
+      const metadataFile = await metadataHandle.getFile();
+      return tryJson(await metadataFile.text()) || null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function isGalleryImageFile(name) {
+    return /\.(png|jpe?g|webp|bmp|gif)$/i.test(name || "");
+  }
+
+  function inferImageFormat(name, mimeType = "") {
+    if (mimeType.startsWith("image/")) return mimeType.replace("image/", "");
+    const match = String(name || "").match(/\.([^.]+)$/);
+    return (match?.[1] || "png").toLowerCase();
   }
 
   async function ensurePermission(handle, write) {
