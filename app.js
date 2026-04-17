@@ -940,8 +940,15 @@
   }
 
   function maybeStartOnboarding() {
+    if (isMobileDefaultWizardSuppressed()) return;
     if (state.onboarding.seen) return;
     window.setTimeout(() => openOnboardingWizard(0), 120);
+  }
+
+  function isMobileDefaultWizardSuppressed() {
+    const narrowViewport = window.matchMedia?.("(max-width: 768px)")?.matches;
+    const mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
+    return Boolean(narrowViewport || mobileUa);
   }
 
   function normalizeWizardStep(value) {
